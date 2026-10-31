@@ -230,8 +230,10 @@ enum MsgId : uint8_t {
     G_OBJ_HOLD = 163,         // reliable: the partner holds the copy of a host's mission object: u8 op (1 hold, 2 release,
                               // 3 enter pressed, 4 deny: host -> partner), u16 object, release: vec3 pos, quat rot
 
-    G_RADIO = 199,            // reliable: u8 op (1 tune: the sender turned the dial, 2 sync: the car's station as its leader
-                              // has it), u16 car, i8 station: the radio of a car shared by the players in it (Radio.cpp)
+    G_RADIO = 199,            // reliable: the radio of a car shared by the players in it (Radio.cpp): u8 op, u16 car, i8
+                              // station; op 1 tune: the sender turned the dial; op 2 sync: the car's station as its leader
+                              // has it, u8 1 and its song (i32 x 5 queue, i8 x 5 types, i8 x 5 indices, u8 flags, i32 ms
+                              // into the first track, i32 its length) or u8 0
     G_VOICE = 200,            // unreliable: voice frame
     G_LAST = 255,
 };
