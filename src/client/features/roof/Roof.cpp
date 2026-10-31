@@ -1,8 +1,6 @@
 // Holding on to a car's roof, as on some MTA servers: standing on a car (its roof, bonnet, flatbed), the hold key
 // (roof_lock, X) keeps the player there while the car drives, turns and jumps. The player keeps its own camera, aims and
-// shoots, and does not walk; the key again or a jump lets go. The gunner's view key (roof_camera, Z) puts it into the
-// game's own turret mode on that spot instead (ATTACH_CHAR_TO_CAR: the gun's first person view of the missions' mounted
-// guns) and back.
+// shoots, and does not walk; the key again or a jump lets go.
 //
 // Here the player is put back on its spot of the car after every frame's physics, moving as fast as that spot of the
 // car. The other games put its copy on their copy of the car with ATTACH_CHAR_TO_CAR (G_PED_ATTACH, as the host's
@@ -21,7 +19,6 @@
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
 #include "shared/game/Game.h"
-#include "shared/game/Script.h"
 #include "shared/lib/core/Core.h"
 #include "shared/ui/chat/Chat.h"
 
@@ -29,10 +26,9 @@ namespace coop::roof {
 
 namespace {
 using namespace game;
-using namespace game::script;
 
 constexpr float kPi = 3.14159265f;
-constexpr float kTurretRange = 360.0f;  // ATTACH_CHAR_TO_CAR's angle limit: all round
+constexpr float kTurretRange = 360.0f;  // the copies' ATTACH_CHAR_TO_CAR angle limit: all round
 constexpr float kMaxStandHeight = 1.6f; // a standing ped's centre is about a metre above what it stands on
 constexpr float kMinStandHeight = 0.3f;
 constexpr float kLostDist = 6.0f;       // further from its spot than this, the player went elsewhere (a teleport)
@@ -43,7 +39,6 @@ struct Hold {
     CVehicle* veh = nullptr;
     CVector offset;             // the player's centre in the car's frame
     float carHeading = 0.0f;    // at the last frame: the player turns as the car turns
-    bool gunner = false;        // in the game's turret mode (ATTACH_CHAR_TO_CAR) instead
     bool madeProof = false;     // we made the player collision-proof (the car it rides must not run it over)
 };
 Hold g_hold;
@@ -100,20 +95,9 @@ void SendCopy(bool on, int weapon) {
     Net().Send(proto::CH_RELIABLE, w);
 }
 
-void LeaveGunner(CPlayerPed* me) {
-    if (!g_hold.gunner) return;
-    g_hold.gunner = false;
-    if (!me) return;
-    if (me->AttachedTo()) Cmd(0x0465).I(GetPedRef(me)).Run();  // DETACH_CHAR_FROM_CAR
-    // CPed::AttachPedToEntity takes a player's collision away (0x5E7D1D) and the detach does not give it back: without
-    // it the player fell through the car and the ground
-    me->Flags() |= 1u;  // CEntity::bUsesCollision
-}
-
 void LetGo(const char* why) {
     if (!g_hold.on) return;
     CPlayerPed* me = FindPlayerPed(0);
-    LeaveGunner(me);
     if (me && g_hold.madeProof) me->PhysicalFlags() &= ~CPhysical::PF_COLLISION_PROOF;
     g_hold.on = false;
     if (Net().Online()) SendCopy(false, 0);
@@ -139,29 +123,11 @@ bool TakeHold(CPlayerPed* me) {
         g_hold.madeProof = true;
     }
     if (nv) SendCopy(true, me->ActiveWeapon().type);
-    ui::TheChat().AddSystem(Format(TR("Вы держитесь за машину: %s — отпустить, %s — вид стрелка.",
-                                      "Holding on to the car: %s lets go, %s switches to the gunner's view."),
-                                   KeyName(Cfg().roofKey).c_str(), KeyName(Cfg().roofCameraKey).c_str()));
+    ui::TheChat().AddSystem(Format(TR("Вы держитесь за машину: %s или прыжок — отпустить.",
+                                      "Holding on to the car: %s or a jump lets go."),
+                                   KeyName(Cfg().roofKey).c_str()));
     LOGI("Roof: holding on to car %04X at (%.2f, %.2f, %.2f)", g_hold.car, g_hold.offset.x, g_hold.offset.y, g_hold.offset.z);
     return true;
-}
-
-void ToggleGunner(CPlayerPed* me) {
-    if (g_hold.gunner) {
-        LeaveGunner(me);
-        g_hold.offset = ToLocal(g_hold.veh, me->GetPosition());  // where the turret left it
-        g_hold.carHeading = g_hold.veh->GetHeading();
-        return;
-    }
-    int weapon = me->ActiveWeapon().type;
-    if (weapon <= 0 || weapon > 46) {
-        ui::TheChat().AddSystem(TR("Для вида стрелка нужно оружие в руках.", "The gunner's view needs a gun in hand."));
-        return;
-    }
-    const CVector& o = g_hold.offset;
-    Cmd(0x0464).I(GetPedRef(me)).I(GetVehicleRef(g_hold.veh)).F(o.x).F(o.y).F(o.z).I(0).F(kTurretRange).I(weapon).Run();  // ATTACH_CHAR_TO_CAR
-    g_hold.gunner = me->AttachedTo() != nullptr;
-    if (!g_hold.gunner) LOGW("Roof: the gunner's view did not take (ATTACH_CHAR_TO_CAR)");
 }
 
 class Roof : public Module {
@@ -183,10 +149,6 @@ public:
         }
         if (!me || !v) return LetGo("the car or the player is gone");
         if (Dead(me) || me->InVehicle()) return LetGo("dead or in a vehicle");
-        if (g_hold.gunner) {
-            if (!me->AttachedTo()) LetGo("the game took it off the car");
-            return;
-        }
         if (me->AttachedTo()) return LetGo("attached by something else");
         CVector spot = ToWorld(v, g_hold.offset);
         if ((spot - me->GetPosition()).Length() > kLostDist) return LetGo("moved away from its spot");
@@ -211,14 +173,9 @@ struct Reg {
 } g_reg;
 }  // namespace
 
-bool Key(bool holdKey) {
+bool Key() {
     CPlayerPed* me = FindPlayerPed(0);
     if (!me || !core::IsPlayerReady()) return false;
-    if (!holdKey) {  // the gunner's view: only while holding on
-        if (!g_hold.on) return false;
-        ToggleGunner(me);
-        return true;
-    }
     if (g_hold.on) {
         LetGo("its key");
         ui::TheChat().AddSystem(TR("Вы отпустили машину.", "You let go of the car."));
@@ -229,7 +186,7 @@ bool Key(bool holdKey) {
 }
 
 void AfterPadUpdate() {
-    if (!g_hold.on || g_hold.gunner) return;
+    if (!g_hold.on) return;
     CPad* pad = GetPad(0);
     if (pad->NewState.ButtonSquare && !pad->OldState.ButtonSquare) {  // a jump lets go (and jumps)
         LetGo("a jump");
