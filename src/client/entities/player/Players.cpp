@@ -1484,8 +1484,10 @@ void Players::ApplyState(RemotePlayer& rp) {
     void* intel = ped->Intelligence();
     if (intel && CallMethod<0x681740, void*>((uint8_t*)intel + 4, 254)) rp.climbMs = NowMs();  // TASK_SIMPLE_CLIMB
     bool climbing = NowMs() - rp.climbMs < 500 && dist2d < 2.0f && std::fabs(err.z) < 2.5f;
-    if (climbing) {
-        // left to its own climb and the half second after it
+    // on a car (ATTACH_CHAR_TO_CAR: a mission's mounted gun, a player holding on to a roof, Roof.cpp): the car places it
+    bool onCar = ped->AttachedTo() != nullptr;
+    if (climbing || onCar) {
+        // left to its own climb and the half second after it; on a car, to the car
     } else if (dist2d > kTeleportDist || std::fabs(err.z) > kTeleportDist || sunk) {
         CVector p = st.pos + side;
         Cmd(0x00A1).I(rp.pedHandle).F(p.x).F(p.y).F(p.z - 1.0f).Run();  // SET_CHAR_COORDINATES

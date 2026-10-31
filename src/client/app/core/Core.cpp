@@ -14,6 +14,7 @@
 #include "common/lib/util/Util.h"
 #include "entities/player/Players.h"
 #include "entities/session/Flow.h"
+#include "features/roof/Roof.h"
 #include "features/story/contest/Contest.h"
 #include "features/story/missions/Missions.h"
 #include "features/teleport/Teleport.h"
@@ -344,6 +345,9 @@ void WriteDefaultConfig(const std::wstring& path) {
         "chat = 84\r\n"
         "enter_as_passenger = 71\r\n"
         "player_list = 113\r\n"
+        "; Держаться за крышу машины (88 = X) и вид стрелка, пока держитесь (90 = Z)\r\n"
+        "roof_lock = 88\r\n"
+        "roof_camera = 90\r\n"
         "\r\n"
         "[debug]\r\n"
         "; Отладочная информация на экране и подробный лог. Включайте, если вас попросили прислать лог.\r\n"
@@ -457,6 +461,9 @@ bool OnKeyDown(int vk, bool repeat) {
         ui::TogglePlayersMenu();
         return true;
     }
+    if ((vk == cfg.roofKey || vk == cfg.roofCameraKey) && !inMenu && !typingCheat && IsPlayerReady() &&
+        roof::Key(vk == cfg.roofKey))
+        return true;  // holding on to a car's roof (Roof.cpp)
     if (vk == cfg.passengerKey && !inMenu && IsPlayerReady()) {
         Players::Instance().TryEnterAsPassenger();
         return false;  // G still reaches the game (gang recruiting)
