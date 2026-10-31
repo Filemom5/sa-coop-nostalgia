@@ -13,6 +13,7 @@
 #include "common/lib/util/Util.h"
 #include "entities/mission/Mission.h"
 #include "entities/vehicle/Vehicles.h"
+#include "features/downed/Downed.h"
 #include "features/roof/Roof.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
@@ -99,7 +100,8 @@ void __cdecl HookUpdatePads() {
         game::GetPad(0)->NewState = game::CControllerState{};
         return;
     }
-    roof::AfterPadUpdate();  // holding on to a car's roof: no walking, a jump lets go
+    roof::AfterPadUpdate();    // holding on to a car's roof: no walking, a jump lets go
+    downed::AfterPadUpdate();  // down: no moving; beside a downed friend the enter key revives
     if (!Cfg().multiInstance || GetForegroundWindow() == (HWND)game::GameWindow()) return;
     for (int i = 0; i < 2; ++i) game::GetPad(i)->NewState = game::CControllerState{};
 }
