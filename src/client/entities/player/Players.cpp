@@ -14,6 +14,7 @@
 #include "entities/ped/Peds.h"
 #include "entities/session/Flow.h"
 #include "entities/vehicle/Vehicles.h"
+#include "features/radio/Radio.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
 #include "shared/game/Anim.h"
@@ -226,8 +227,17 @@ bool PassengerAiming() {
 // (CAERadioTrackManager, its two calls) does not hear them meanwhile.
 using StationFn = bool(__fastcall*)(CPad*, void*);
 StationFn g_origNextStation = nullptr, g_origLastStation = nullptr;
-bool __fastcall HookNextStation(CPad* pad, void* edx) { return !PassengerAiming() && g_origNextStation(pad, edx); }
-bool __fastcall HookLastStation(CPad* pad, void* edx) { return !PassengerAiming() && g_origLastStation(pad, edx); }
+// A turn of the dial is also told to the other players in the car (Radio.cpp).
+bool __fastcall HookNextStation(CPad* pad, void* edx) {
+    bool turned = !PassengerAiming() && g_origNextStation(pad, edx);
+    if (turned) radio::StationKey(1);
+    return turned;
+}
+bool __fastcall HookLastStation(CPad* pad, void* edx) {
+    bool turned = !PassengerAiming() && g_origLastStation(pad, edx);
+    if (turned) radio::StationKey(-1);
+    return turned;
+}
 
 bool __cdecl PassengerDriveBy() {
     const CPad* pad = GetPad(0);
