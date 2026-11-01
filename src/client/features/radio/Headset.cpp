@@ -3,6 +3,8 @@
 // game draws a weapon at a hand (CVisibilityPlugins::RenderWeaponPedsForPC): the bone's matrix into the model's frame,
 // lit as the ped, rendered. Ours comes right after that one, in the same render state: the frame's call of it
 // (in the scene's render, after RenderScene) is redirected, not the function, which SilentPatch replaces with its own.
+// So are its calls in a mirror's render (CMirrors::RenderReflBuffer) and in a photo's (the camera): the headset shows in
+// mirrors and photos too.
 //
 // Putting them on or taking them off plays the night vision goggles' animation on the upper body (GOGGLES,
 // goggles_put_on: both hands to the head), and the headset shows or goes as the hands get there. In a vehicle with a
@@ -43,7 +45,8 @@ namespace {
 using namespace game;
 using namespace game::script;
 
-constexpr uintptr_t kCallRenderWeaponPeds = 0x53EAC4;  // the frame's call of CVisibilityPlugins::RenderWeaponPedsForPC
+// the calls of CVisibilityPlugins::RenderWeaponPedsForPC: the frame's scene, a mirror's reflection, a photo
+constexpr uintptr_t kCallRenderWeaponPeds = 0x53EAC4, kCallMirror = 0x7271E3, kCallPhoto = 0x705322;
 constexpr int kBoneHead = 5;                       // BONE_HEAD
 constexpr uint32_t kCombinePreConcat = 1;          // rwCOMBINEPRECONCAT
 constexpr uint64_t kHandsUpMs = 700;               // the hands reach the head this far into the animation
@@ -100,7 +103,7 @@ uint8_t g_toldColour = 0;
 uint8_t* g_materials[3] = {};        // the model's RpMaterials
 
 using VoidFn = void(__cdecl*)();
-VoidFn g_origRender = nullptr;
+VoidFn g_origRender = nullptr, g_origMirror = nullptr, g_origPhoto = nullptr;
 
 void* Model() {
     if (g_model || g_modelFailed) return g_model;
@@ -144,8 +147,9 @@ void Paint(uint8_t colour) {
     }
 }
 
-// the headset at a ped's head, lit as the ped, in its player's colours
-void DrawOn(CPed* ped, uint8_t colour) {
+// the headset at a ped's head, lit as the ped, in its player's colours. reflection: a mirror's render, whose camera is
+// not the one the ped's visibility was judged with
+void DrawOn(CPed* ped, uint8_t colour, bool reflection) {
     void* clump = ped ? ped->RwObject() : nullptr;
     if (!clump || !ped->IsVisible()) return;
     CPlayerPed* me = FindPlayerPed(0);
@@ -154,7 +158,7 @@ void DrawOn(CPed* ped, uint8_t colour) {
         float dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
         if (dx * dx + dy * dy + dz * dz > kDrawDistance * kDrawDistance) return;
     }
-    if (!CallMethod<0x534540, bool>(ped)) return;  // CEntity::GetIsOnScreen: its bones are this frame's
+    if (!reflection && !CallMethod<0x534540, bool>(ped)) return;  // CEntity::GetIsOnScreen: its bones are this frame's
     void* hierarchy = Call<0x734A40, void*>(clump);  // GetAnimHierarchyFromSkinClump
     if (!hierarchy) return;
     int index = Call<0x7C51A0, int>(hierarchy, kBoneHead);  // RpHAnimIDGetIndex
@@ -176,14 +180,26 @@ void DrawOn(CPed* ped, uint8_t colour) {
     CallMethod<0x5533B0>(ped, (uint8_t)lit);    // CPed::RemoveLighting(bool): it takes what SetupLighting gave (ret 4)
 }
 
-void __cdecl HookRenderWeaponPeds() {
-    g_origRender();
+void DrawAll(bool reflection) {
     if ((!g_shown && g_remote.empty()) || !core::IsPlayerReady() || !Model()) return;
-    if (g_shown) DrawOn(FindPlayerPed(0), g_colour);
+    if (g_shown) DrawOn(FindPlayerPed(0), g_colour, reflection);
     for (const auto& [id, r] : g_remote) {
         RemotePlayer* rp = Players::Instance().Get(id);
-        if (rp && rp->ped) DrawOn(rp->ped, r.colour);
+        if (rp && rp->ped) DrawOn(rp->ped, r.colour, reflection);
     }
+}
+
+void __cdecl HookRenderWeaponPeds() {
+    g_origRender();
+    DrawAll(false);
+}
+void __cdecl HookMirrorWeaponPeds() {
+    g_origMirror();
+    DrawAll(true);
+}
+void __cdecl HookPhotoWeaponPeds() {
+    g_origPhoto();
+    DrawAll(false);
 }
 
 // an IFP block in memory, else asked for
@@ -230,6 +246,10 @@ public:
     void OnInstallHooks() override {
         if (!mem::RedirectCallFn(kCallRenderWeaponPeds, &HookRenderWeaponPeds, &g_origRender))
             LOGW("Headphones: the scene's render is not as expected: no headset on the head");
+        if (!mem::RedirectCallFn(kCallMirror, &HookMirrorWeaponPeds, &g_origMirror))
+            LOGW("Headphones: the mirrors' render is not as expected: no headset in them");
+        if (!mem::RedirectCallFn(kCallPhoto, &HookPhotoWeaponPeds, &g_origPhoto))
+            LOGW("Headphones: the camera's photo is not as expected: no headset in photos");
     }
     void OnSessionEnd() override {
         g_remote.clear();

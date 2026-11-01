@@ -22,13 +22,13 @@ COLOURS = [(28, 28, 32, 255), (18, 18, 20, 255), (255, 95, 176, 255)]  # as made
 
 # sizes in metres (fitted in the game on CJ: the cups over the ears, the band 3 cm above where it first was)
 CUP_X = 0.055          # the cups' middle, up the head bone
-CUP_Z = 0.095          # either side
+CUP_Z = 0.089          # either side (in 6 mm from the first fit: snug on the ears)
 CUP_A = 0.050          # the oval's half height
 CUP_B = 0.041          # its half width, front to back
-CUSHION_IN, CUSHION_OUT = 0.077, 0.091  # the cushion, out from the head's middle
-SHELL_IN, SHELL_OUT = 0.090, 0.117      # the shell
+CUSHION_IN, CUSHION_OUT = 0.071, 0.085  # the cushion, out from the head's middle
+SHELL_IN, SHELL_OUT = 0.084, 0.111      # the shell
 BAND_X = 0.085         # the band's arc: its middle up the head bone, its radius
-BAND_R = 0.104
+BAND_R = 0.098
 BAND_W = 0.032         # front to back
 BAND_T = 0.011         # thickness
 BAND_END = math.radians(73)  # the arc ends above the cups; the sliders go down from there

@@ -8,6 +8,12 @@
 // Pickups that appear in one game only are announced: the loot of a ped killed here, a dropped jetpack, the pickups of
 // the host's mission. Pickups of the scripts both games run (the street weapons, the collectibles) are not, and neither
 // are save disks, info icons and houses for sale, whose scripts react in each game (houses go through Property.cpp).
+//
+// In a vehicle the game takes only a bribe (CPickup::Update: anything else wants the player on foot). Here its driver
+// also takes the money and the weapons it goes over: for those, while the vehicle touches one, CPickup::Update runs as
+// for a player on foot standing on it (no vehicle, the player's place moved onto the pickup for that call and put back
+// after), so all the rest is the game's own (the money, the weapon and its ammo, the sound) and it goes to the others as
+// any pickup taken here. Passengers take nothing: one taker per vehicle.
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -82,6 +88,29 @@ void SendEvent(uint8_t what, uintptr_t p, uint8_t type) {
 }
 
 // ---------------------------------------------------------------- this game's player takes a pickup
+constexpr float kVehicleReach = 2.5f;  // around the vehicle's shape: each pickup is looked at every 6th frame only
+
+// money, or a weapon (not health, armour, a bribe or a mission's own item): what a driver takes by going over it
+bool TakenByVehicle(uint8_t type, int model) {
+    switch (type) {
+    case PU_MONEY: case PU_MONEY_DOESNTDISAPPEAR:
+        return true;
+    case PU_ON_STREET: case PU_ONCE: case PU_ONCE_TIMEOUT: case PU_ONCE_TIMEOUT_SLOW: case PU_ON_STREET_SLOW: {
+        int weapon = Call<0x454AE0, int>(model);  // CPickups::WeaponForModel
+        return weapon >= 1 && weapon <= 46;       // brass knuckles .. parachute
+    }
+    }
+    return false;
+}
+
+// our player drives that vehicle and it touches the pickup
+bool DriverOver(uintptr_t p, CPlayerPed* player, CVehicle* veh) {
+    if (!veh || player != FindPlayerPed(0) || veh->Driver() != player || (Ref<uint8_t>(p + 0x1D) & 1)) return false;
+    if (!Field<void*>((void*)p, 4) || !TakenByVehicle(Type(p), Model(p))) return false;  // its object (not yet: far)
+    const int16_t* q = Pos(p);
+    return CallMethod<0x6D84D0, bool>(veh, q[0] / 8.0f, q[1] / 8.0f, q[2] / 8.0f, kVehicleReach);  // IsSphereTouchingVehicle
+}
+
 using PickupUpdateFn = bool(__fastcall*)(void*, void*, CPlayerPed*, CVehicle*, int);
 PickupUpdateFn g_origPickupUpdate = nullptr;
 bool __fastcall HookPickupUpdate(void* pickup, void* edx, CPlayerPed* player, CVehicle* veh, int playerId) {
@@ -90,7 +119,18 @@ bool __fastcall HookPickupUpdate(void* pickup, void* edx, CPlayerPed* player, CV
     float takings = Ref<float>(p);
     uint8_t before[0x20];
     memcpy(before, pickup, sizeof(before));  // Remove() clears the type and the object
-    bool taken = g_origPickupUpdate(pickup, edx, player, veh, playerId);
+    bool taken;
+    if (DriverOver(p, player, veh)) {
+        // as if on foot, standing on it
+        CVector place = player->GetPosition();
+        const int16_t* q = Pos(p);
+        player->SetPositionRaw(CVector{q[0] / 8.0f, q[1] / 8.0f, q[2] / 8.0f});
+        taken = g_origPickupUpdate(pickup, edx, player, nullptr, playerId);
+        player->SetPositionRaw(place);
+        if (taken) LOGD("Pickups: model %d taken by driving over it", Model((uintptr_t)before));
+    } else {
+        taken = g_origPickupUpdate(pickup, edx, player, veh, playerId);
+    }
     if (!flow::InSharedWorld() || g_applying || player != FindPlayerPed(0) || !Shared(type, Model((uintptr_t)before)))
         return taken;
     if (taken) {

@@ -1,5 +1,12 @@
 ## Novo nesta versão
 
+- **Pegar dinheiro e armas com o veículo:** quem está dirigindo pega o dinheiro e as armas do chão passando por cima,
+  com qualquer veículo. Os passageiros não pegam nada (um por veículo).
+- **Fone no espelho e nas fotos:** agora o fone também aparece no reflexo do espelho e nas fotos da câmera.
+- **Conchas do fone mais fechadas:** 6 mm mais para dentro, encostadas nas orelhas.
+
+## Da versão 9
+
 - **Fone agora no J** (era H). No GTA, o H a pé é o comando "grupo: recuar" e travava o W enquanto estava apertado.
   Toque **J** para pôr e tirar; segurando **J**, a rodinha troca a estação.
 - **Mesma música ao voltar para uma estação:** ao trocar de estação no fone, a anterior fica guardada como no rádio do
