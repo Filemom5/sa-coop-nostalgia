@@ -1,5 +1,11 @@
 ## Novo nesta versão
 
+- **Placa NOSTALGIA:** a placa VINEWOOD do morro agora diz NOSTALGIA. N, O e I são as letras originais. S, T, A, L e G
+  foram desenhadas no mesmo tipo de letra, com as mesmas texturas, estruturas e luz de dia e de noite. De longe também
+  aparece NOSTALGIA, e dá para subir e andar nas letras como antes.
+
+## Da versão 13
+
 - **Cursor da roda de armas corrigido:** o movimento para cima e para baixo estava invertido para quem não usa o mouse
   invertido no jogo (o jogo inverte o eixo vertical para a câmera, e a roda pegava esse valor). Agora o cursor anda
   igual ao mouse, e um pouco mais rápido.
