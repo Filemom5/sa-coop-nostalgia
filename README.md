@@ -20,7 +20,7 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
 
 1. Tenha o GTA San Andreas 1.0 US com o **SA:COOP 0.3.2** oficial instalado
    ([releases do SA:COOP](https://github.com/Karimov-Akbar/sa-coop/releases)).
-2. Baixe o `SA-COOP-Nostalgia-instalador.zip` da [última versão](../../releases/latest) e extraia **dentro da pasta
+2. Baixe o `SA-COOP-Nostalgia-instalador.zip` da [última versão](https://github.com/Filemom5/sa-coop-nostalgia/releases/latest) e extraia **dentro da pasta
    do GTA** (onde fica o `gta_sa.exe`). Ele traz o `Jogar SA-COOP.bat` e o `coop\atualizador.ps1`.
 3. Abra o jogo sempre pelo **`Jogar SA-COOP.bat`**. Ele baixa a versão mais nova (se houver) e abre o GTA.
 
