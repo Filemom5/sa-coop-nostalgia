@@ -1,0 +1,44 @@
+# SA-COOP Nostalgia: runs the launcher and the updater in Windows PowerShell 5 on a made-up game folder (an Open Limit
+# Adjuster with the game's own limits in scripts\, to see the .ini fixed) and keeps two pictures of the launcher's window,
+# before and after the update, as an artifact.
+name: previa do launcher
+
+on:
+  push:
+    branches: [main]
+    paths: ["nostalgia/**", ".github/workflows/previa-launcher.yml"]
+  workflow_dispatch:
+
+jobs:
+  previa:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Launcher and updater on a made-up game folder
+        shell: powershell
+        run: |
+          $jogo = Join-Path $env:RUNNER_TEMP 'gta'
+          New-Item -ItemType Directory -Force (Join-Path $jogo 'scripts') | Out-Null
+          Copy-Item -Recurse nostalgia\coop $jogo
+          Copy-Item "$env:SystemRoot\System32\notepad.exe" (Join-Path $jogo 'gta_sa.exe')
+          Set-Content (Join-Path $jogo 'scripts\III.VC.SA.LimitAdjuster.asi') 'x'
+          $ini = Join-Path $jogo 'scripts\III.VC.SA.LimitAdjuster.ini'
+          (Get-Content nostalgia\limit-adjuster\III.VC.SA.LimitAdjuster.ini) -replace '^Peds = 500', 'Peds = 140' -replace '^PedIntelligence = 500', 'PedIntelligence = 140' -replace '^Vehicles = 500', 'Vehicles = 110' | Set-Content $ini
+          $previa = Join-Path $env:GITHUB_WORKSPACE 'previa'
+          powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $jogo 'coop\launcher.ps1') -Previa $previa
+          if ($LASTEXITCODE) { throw "the launcher ended with $LASTEXITCODE" }
+          '--- ini'
+          Select-String -Path $ini -Pattern '^(Peds|PedIntelligence|Vehicles|EntryInfoNode) =' | Select-Object -First 4 | ForEach-Object { $_.Line }
+          '--- files'
+          Get-ChildItem -Recurse -File $jogo | ForEach-Object { $_.FullName.Substring($jogo.Length) + ' ' + $_.Length }
+          '--- shortcut'
+          $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'SA-COOP Nostalgia.lnk'
+          if (Test-Path $lnk) { $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); $s.TargetPath; $s.Arguments; $s.IconLocation; $s.WindowStyle } else { 'no shortcut' }
+          '--- pictures'
+          Get-ChildItem $previa | ForEach-Object { $_.Name + ' ' + $_.Length }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: previa-launcher
+          path: previa/*

@@ -5,3 +5,4 @@
 package/** text eol=crlf
 *.png binary
 *.jpg binary
+*.ico binary
