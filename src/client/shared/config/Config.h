@@ -54,6 +54,7 @@ struct ClientConfig {
     int passengerKey = 0x47;          // G
     int playerListKey = 0x71;         // F2
     int roofKey = 0x58;               // X: hold on to the car one stands on (Roof.cpp)
+    int headphonesKey = 0x48;         // H: the headphones, a station on foot (Headphones.cpp)
 
     // [debug]
     bool debugOverlay = false;

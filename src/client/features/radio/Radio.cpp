@@ -11,16 +11,24 @@
 // takes the leader's next track, so that both go on to the same one (the stream's next track, as the game's own
 // CheckForTrackConcatenation gives it). User tracks are each player's own files: only their station is shared.
 //
+// A station is the same for everyone, as a real one would be: each radio of its own (a player alone in a car, a car's
+// leader, the headphones of Headphones.cpp) tells the others its station, how long it has listened to it and its song,
+// and on a station someone else has listened to for longer the song is that one's (the same way a car follows its
+// leader). So players in separate cars on the same station hear the same song; the station itself stays each car's own.
+//
 // G_RADIO, reliable: u8 op, u16 car (net id), i8 station.
 //  * OP_TUNE: the sender turned the dial to that station just now; everyone in the car tunes to it.
 //  * OP_SYNC: the car's station as its leader has it, then u8 1 and its song while it plays one (i32 x 5 queue, i8 x 5
 //    track types, i8 x 5 track indices, u8 track flags, i32 ms into the first track, i32 its length), else u8 0. Sent on
 //    someone getting in, on each new track and every 3 s while players share the car.
+//  * OP_STATION: the station of a radio of its own (car: the sender's, or 0), u32 ms it has listened to it, then its song
+//    as in OP_SYNC. Sent on a new track, a change of station and every 3 s; station 13 (off) when it stops telling.
 #include "features/radio/Radio.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <map>
 #include <set>
 
 #include "common/api/protocol/Protocol.h"
@@ -29,6 +37,7 @@
 #include "common/lib/util/Util.h"
 #include "entities/player/Players.h"
 #include "entities/vehicle/Vehicles.h"
+#include "features/radio/Headphones.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/game/Game.h"
 #include "shared/lib/core/Core.h"
@@ -38,7 +47,7 @@ namespace coop::radio {
 namespace {
 using namespace game;
 
-enum : uint8_t { OP_TUNE = 1, OP_SYNC = 2 };
+enum : uint8_t { OP_TUNE = 1, OP_SYNC = 2, OP_STATION = 3 };
 
 // CAERadioTrackManager AERadioTrackManager (0x8CB6F8) and its fields
 constexpr uintptr_t kRadio = 0x8CB6F8;
@@ -73,6 +82,8 @@ constexpr uint64_t kForceGapMs = 6000;     // after starting the leader's song, 
 constexpr int32_t kDriftMs = 800;          // further apart than this, the leader's place is taken again
 constexpr int32_t kEdgeMs = 2000;          // around a change of track, one game may be a moment ahead
 constexpr int32_t kStartLagMs = 150;       // a stream takes about this long from the start to the first sound
+constexpr uint64_t kListenerFreshMs = 7000;  // a radio of its own not heard of for this long is gone
+constexpr int64_t kTieMs = 1000;           // listened to for about as long: the lower player id leads
 
 uint8_t* Manager() { return (uint8_t*)kRadio; }
 uint8_t* Active() { return Manager() + kActive; }
@@ -164,6 +175,15 @@ bool PlayingSong(int8_t station, Song& s) {
     return true;
 }
 
+// a song another radio plays, as last heard, until our radio is in step with it
+struct Follow {
+    bool pending = false;
+    Song song{};
+    int8_t station = -1;
+    uint64_t recvMs = 0;
+    uint64_t forceMs = 0;        // we last started its song then
+};
+
 uint16_t g_car = 0;              // the car we were in at the last frame
 std::set<uint8_t> g_others;      // the other players in it then
 bool g_leader = false;           // our game speaks for the car's radio (at the last frame)
@@ -172,12 +192,23 @@ uint64_t g_syncMs = 0;
 int32_t g_sentTrack = -1;        // leader: the first track of the queue it last told
 uint64_t g_tuneMs = 0;           // the dial was last turned (here or by someone in the car) then
 int8_t g_pendingTune = -1;       // our player's turn of the dial, to send after the radio's update
-// the leader's song as last heard, until it is acted on
-bool g_songPending = false;
-Song g_song;
-int8_t g_songStation = -1;
-uint64_t g_songRecvMs = 0;
-uint64_t g_forceMs = 0;          // we last started the leader's song then
+Follow g_carSong;                // the car's leader's song (we share a car and do not lead it)
+
+// the radios of their own of the other players, as they last told them (OP_STATION)
+struct Listener {
+    int8_t station = -1;
+    uint32_t heldMs = 0;         // how long it had listened to the station when it told
+    uint64_t recvMs = 0;
+    Song song{};
+};
+std::map<uint8_t, Listener> g_listeners;
+int8_t g_ownStation = -1;        // our own radio's station (settled), listened to since g_ownSinceMs
+uint64_t g_ownSinceMs = 0;
+uint64_t g_stationSyncMs = 0;
+int32_t g_stationSentTrack = -1;
+bool g_stationTold = false;      // the others have our station: an "off" goes out when we stop
+uint8_t g_stationLeader = 0xFF;  // whose song our station plays (0xFF: our own), as last logged
+Follow g_stationSong;            // that one's song
 
 void SendTune(uint16_t car, int8_t station) {
     Writer w(proto::G_RADIO);
@@ -204,88 +235,194 @@ void SendSync(uint16_t car, int8_t station, const Song* song) {
     Net().Send(proto::CH_RELIABLE, w);
 }
 
+void SendStation(int8_t station, uint32_t heldMs, const Song* song) {
+    Writer w(proto::G_RADIO);
+    w.U8(OP_STATION);
+    w.U16(g_car);
+    w.I8(station);
+    w.U32(heldMs);
+    w.U8(song ? 1 : 0);
+    if (song) {
+        for (int32_t t : song->queue) w.I32(t);
+        for (int8_t t : song->types) w.I8(t);
+        for (int8_t i : song->indices) w.I8(i);
+        w.U8(song->flags);
+        w.I32(song->pos);
+        w.I32(song->length);
+    }
+    Net().Send(proto::CH_RELIABLE, w);
+}
+
+// our radio is no longer our own, or it plays no station's songs: the others stop counting it
+void StopTelling() {
+    if (g_stationTold) SendStation(kRadioOff, 0, nullptr);
+    g_stationTold = false;
+    g_ownStation = -1;
+    g_stationSentTrack = -1;
+    g_stationSong.pending = false;
+    g_stationLeader = 0xFF;
+}
+
 void Reset() {
+    StopTelling();
     g_car = 0;
     g_others.clear();
     g_leader = g_syncDue = false;
-    g_syncMs = g_tuneMs = g_forceMs = 0;
+    g_syncMs = g_tuneMs = 0;
     g_sentTrack = -1;
     g_pendingTune = -1;
-    g_songPending = false;
+    g_carSong = Follow{};
+    g_stationSong = Follow{};
+    g_listeners.clear();
 }
 
-// the leader's place, now: what it said plus the time since and the way here
-int32_t LeaderPlace(uint64_t now) {
+// the other radio's place, now: what it said plus the time since and the way here
+int32_t LeaderPlace(const Follow& f, uint64_t now) {
     int32_t way = (int32_t)std::min<uint32_t>(Net().Rtt(), 500);
-    return g_song.pos + (int32_t)(now - g_songRecvMs) + way;
+    return f.song.pos + (int32_t)(now - f.recvMs) + way;
 }
 
-// the leader's next track becomes ours too (ours plays the same track as the leader's, in step)
-void TakeNext() {
+// the other radio's next track becomes ours too (ours plays the same track as its, in step)
+void TakeNext(const Follow& f) {
     uint8_t* a = Active();
-    if (g_song.queue[1] < 0 || QueueAt(a, 1) == g_song.queue[1]) return;
+    if (f.song.queue[1] < 0 || QueueAt(a, 1) == f.song.queue[1]) return;
     for (int i = 1; i < kQueueLen; ++i) {
-        QueueAt(a, i) = g_song.queue[i];
-        Field<int8_t>(a, kTypes + i) = g_song.types[i];
-        Field<int8_t>(a, kIndices + i) = g_song.indices[i];
+        QueueAt(a, i) = f.song.queue[i];
+        Field<int8_t>(a, kTypes + i) = f.song.types[i];
+        Field<int8_t>(a, kIndices + i) = f.song.indices[i];
     }
     // the stream keeps playing its track and only takes the next one, as after the game's own change of track
     // (CheckForTrackConcatenation; CAEStreamThread::Service: the playing track is the one asked for)
     CallMethod<0x4D8F10>((void*)kAudioHardware, (uint32_t)QueueAt(a, 0), (int32_t)QueueAt(a, 1), (uint32_t)0,
                          (uint8_t)Field<uint8_t>(a, kFlags), Field<int8_t>(a, kTypes) == kTrackUser,
                          Field<int8_t>(a, kTypes + 1) == kTrackUser);  // CAEAudioHardware::PlayTrack
-    LOGI("Radio: next track %d as the leader's", g_song.queue[1]);
+    LOGI("Radio: next track %d as the leader's", f.song.queue[1]);
 }
 
-// our radio starts the leader's queue at its place, as StartRadio starts a station
-void StartLeadersSong(int32_t at, const uint8_t* vehicleSettings) {
+// our radio starts the other radio's queue at its place, as StartRadio starts a station (no vehicle: the headphones)
+void StartLeadersSong(const Follow& f, int32_t at, const uint8_t* vehicleSettings) {
     uint8_t* m = Manager();
     uint8_t* rs = Requested();
     Field<int32_t>(m, kStationsListed) = 0;
     Field<int32_t>(m, kStationsListDown) = 0;
     Field<int32_t>(m, kScriptRequest) = -1;
     for (int i = 0; i < kQueueLen; ++i) {
-        QueueAt(rs, i) = g_song.queue[i];
-        Field<int8_t>(rs, kTypes + i) = g_song.types[i];
-        Field<int8_t>(rs, kIndices + i) = g_song.indices[i];
+        QueueAt(rs, i) = f.song.queue[i];
+        Field<int8_t>(rs, kTypes + i) = f.song.types[i];
+        Field<int8_t>(rs, kIndices + i) = f.song.indices[i];
     }
-    Field<uint8_t>(rs, kFlags) = g_song.flags;
-    Field<int8_t>(rs, kStation) = g_songStation;
-    Field<int8_t>(rs, 0x26) = (int8_t)vehicleSettings[6];             // BassSetting (tVehicleAudioSettings::BassSetting)
-    Field<float>(rs, 0x28) = Field<float>(vehicleSettings, 8);       // BassGain (::BassFactor)
+    Field<uint8_t>(rs, kFlags) = f.song.flags;
+    Field<int8_t>(rs, kStation) = f.station;
+    Field<int8_t>(rs, 0x26) = vehicleSettings ? (int8_t)vehicleSettings[6] : (int8_t)0;  // BassSetting (::BassSetting)
+    Field<float>(rs, 0x28) = vehicleSettings ? Field<float>(vehicleSettings, 8) : 0.0f;   // BassGain (::BassFactor)
     Field<int32_t>(rs, kPlayTime) = std::max(at, 0);
     if (Field<int32_t>(m, kMode) <= MODE_PLAYING) Field<int32_t>(m, kMode) = MODE_STOPPING;
     Field<uint8_t>(m, kInitialised) = 1;
 }
 
-// acts on the leader's song: true when done with it (in step, started, or no longer of use), false to look again
-bool FollowSong(uint64_t now) {
-    if (!g_songPending || now - g_songRecvMs > kSongKeepMs) return true;
-    uint8_t* vs = CivilianRadio();
-    if (g_leader || !g_car || !vs) return true;
+// acts on another radio's song (f.pending): done with it when in step, started, or no longer of use; else looked at
+// again the next frame. vs: our vehicle's radio settings (none with the headphones)
+void FollowSong(Follow& f, uint64_t now, const uint8_t* vs) {
+    if (!f.pending) return;
+    if (now - f.recvMs > kSongKeepMs) {
+        f.pending = false;
+        return;
+    }
     int8_t mine = -1;
-    if (!Settled(mine)) return false;  // our dial still turns
-    if (mine != g_songStation && now - g_tuneMs < kTuneSettleMs) return true;  // the leader may not have our pick yet
-    int32_t place = LeaderPlace(now);
-    if (g_song.length > 0 && place >= g_song.length) return true;  // that song is over there: its next one comes soon
+    if (!Settled(mine)) return;  // our dial still turns
+    if (mine != f.station && now - g_tuneMs < kTuneSettleMs) {  // the leader may not have our pick yet
+        f.pending = false;
+        return;
+    }
+    int32_t place = LeaderPlace(f, now);
+    if (f.song.length > 0 && place >= f.song.length) {  // that song is over there: its next one comes soon
+        f.pending = false;
+        return;
+    }
     uint8_t* a = Active();
-    if (mine == g_songStation && Field<int32_t>(Manager(), kMode) == MODE_PLAYING) {
+    if (mine == f.station && Field<int32_t>(Manager(), kMode) == MODE_PLAYING) {
         int32_t first = QueueAt(a, 0), pos = Field<int32_t>(a, kPlayTime), length = Field<int32_t>(a, kLength);
         bool playing = pos >= 0 && Field<int32_t>(a, kCurrTrack) == first;
-        if (playing && first == g_song.queue[0] && std::abs(pos - place) <= kDriftMs) {
-            TakeNext();
-            return true;
+        if (playing && first == f.song.queue[0] && std::abs(pos - place) <= kDriftMs) {
+            TakeNext(f);
+            f.pending = false;
+            return;
         }
-        // a moment ahead (already in the leader's next track) or behind (the leader is in our next one)
-        if (playing && first == g_song.queue[1] && pos < kEdgeMs && g_song.length - place < kEdgeMs) return true;
-        if (playing && QueueAt(a, 1) == g_song.queue[0] && length - pos < kEdgeMs && place < kEdgeMs) return true;
+        // a moment ahead (already in the other's next track) or behind (the other is in our next one)
+        if ((playing && first == f.song.queue[1] && pos < kEdgeMs && f.song.length - place < kEdgeMs) ||
+            (playing && QueueAt(a, 1) == f.song.queue[0] && length - pos < kEdgeMs && place < kEdgeMs)) {
+            f.pending = false;
+            return;
+        }
     }
-    if (now - g_forceMs < kForceGapMs) return false;  // the last start may still be on its way
-    StartLeadersSong(place + kStartLagMs, vs);
-    g_forceMs = now;
-    LOGI("Radio: playing the leader's song (station %d, track %d at %d ms)", g_songStation, g_song.queue[0],
+    if (now - f.forceMs < kForceGapMs) return;  // the last start may still be on its way
+    StartLeadersSong(f, place + kStartLagMs, vs);
+    f.forceMs = now;
+    f.pending = false;
+    LOGI("Radio: playing the song of another radio (station %d, track %d at %d ms)", f.station, f.song.queue[0],
          place + kStartLagMs);
-    return true;
+}
+
+// Our own radio and the stations' sync: tells the others our station, and on a station someone else has listened to
+// for longer, plays that one's song. own: our radio is our own (alone in a car, its leader, the headphones).
+void StationSync(uint64_t now, bool own, const uint8_t* vs) {
+    int8_t station = -1;
+    if (!own) {
+        StopTelling();
+        return;
+    }
+    if (!Settled(station)) return;  // the dial turns
+    if (station <= kRadioEmergency || station >= kRadioUserTracks) {  // no songs to share: off, the user tracks
+        StopTelling();
+        return;
+    }
+    if (station != g_ownStation) {
+        StopTelling();
+        g_ownStation = station;
+        g_ownSinceMs = now;
+    }
+    // the radio that leads the station: the one that has listened to it longest
+    uint8_t lead = Net().MyId();
+    int64_t longest = (int64_t)(now - g_ownSinceMs);
+    for (auto it = g_listeners.begin(); it != g_listeners.end();) {
+        const Listener& l = it->second;
+        if (now - l.recvMs > kListenerFreshMs || !Net().Peers().count(it->first)) {
+            it = g_listeners.erase(it);
+            continue;
+        }
+        int64_t held = (int64_t)l.heldMs + (int64_t)(now - l.recvMs);
+        if (l.station == station && (held > longest + kTieMs || (std::llabs(held - longest) <= kTieMs && it->first < lead))) {
+            lead = it->first;
+            longest = held;
+        }
+        ++it;
+    }
+    uint8_t leader = lead == Net().MyId() ? 0xFF : lead;
+    if (leader != g_stationLeader) {
+        g_stationLeader = leader;
+        if (leader != 0xFF)
+            LOGI("Radio: station %d plays %s's song (listening for %lld s)", station, Net().PeerName(leader).c_str(),
+                 (long long)(longest / 1000));
+    }
+    if (leader != 0xFF) {
+        const Listener& l = g_listeners[leader];
+        if (l.recvMs != g_stationSong.recvMs) {  // a word of it not acted on yet
+            g_stationSong.song = l.song;
+            g_stationSong.station = station;
+            g_stationSong.recvMs = l.recvMs;
+            g_stationSong.pending = true;
+        }
+        FollowSong(g_stationSong, now, vs);
+    } else {
+        g_stationSong.pending = false;
+    }
+    Song song{};
+    if (!PlayingSong(station, song)) return;
+    if (song.queue[0] == g_stationSentTrack && now - g_stationSyncMs < kSyncEveryMs) return;
+    SendStation(station, (uint32_t)std::min<uint64_t>(now - g_ownSinceMs, 0xFFFFFFFFull), &song);
+    g_stationTold = true;
+    g_stationSyncMs = now;
+    g_stationSentTrack = song.queue[0];
 }
 
 void Handle(uint8_t from, Reader& r) {
@@ -294,7 +431,9 @@ void Handle(uint8_t from, Reader& r) {
     int8_t station = r.I8();
     Song song{};
     bool hasSong = false;
-    if (op == OP_SYNC) {
+    uint32_t heldMs = 0;
+    if (op == OP_STATION) heldMs = r.U32();
+    if (op == OP_SYNC || op == OP_STATION) {
         hasSong = r.U8() != 0;
         if (hasSong) {
             for (int32_t& t : song.queue) t = r.I32();
@@ -306,11 +445,18 @@ void Handle(uint8_t from, Reader& r) {
         }
     }
     if (!r.Ok() || from == Net().MyId() || station <= kRadioEmergency || station > kRadioOff) return;
-    if (!core::IsPlayerReady() || !car || car != CurrentCar() || !CivilianRadio()) return;
     uint64_t now = NowMs();
+    if (op == OP_STATION) {
+        if (hasSong && station < kRadioUserTracks && song.queue[0] >= 0 && song.pos >= 0)
+            g_listeners[from] = Listener{station, heldMs, now, song};
+        else
+            g_listeners.erase(from);
+        return;
+    }
+    if (!core::IsPlayerReady() || !car || car != CurrentCar() || !CivilianRadio()) return;
     if (op == OP_TUNE) {
         g_tuneMs = now;
-        g_songPending = false;  // a song of the station before
+        g_carSong.pending = false;  // a song of the station before
         if (Target() == station) return;
         LOGI("Radio: %s tuned the car to station %d", Net().PeerName(from).c_str(), station);
         CallMethod<0x4E8290>(Manager(), station);  // CAERadioTrackManager::RetuneRadio
@@ -318,11 +464,11 @@ void Handle(uint8_t from, Reader& r) {
     }
     if (op != OP_SYNC || g_leader) return;  // two leaders for a moment (a driver changing): ours keeps its word
     if (hasSong && station < kRadioUserTracks && song.queue[0] >= 0 && song.pos >= 0) {
-        g_song = song;
-        g_songStation = station;
-        g_songRecvMs = now;
-        g_songPending = true;
-        if (FollowSong(now)) g_songPending = false;
+        g_carSong.song = song;
+        g_carSong.station = station;
+        g_carSong.recvMs = now;
+        g_carSong.pending = true;
+        FollowSong(g_carSong, now, CivilianRadio());
         return;
     }
     // no song to follow (user tracks, the radio off): the station alone
@@ -339,11 +485,14 @@ public:
     void OnSessionEnd() override { Reset(); }
     void OnGameShutdown() override { Reset(); }
 
+    void OnPeerLeave(uint8_t id) override { g_listeners.erase(id); }
+
     void OnPostProcess() override {
         if (!Net().Online() || !core::IsPlayerReady()) {
             Reset();
             return;
         }
+        uint64_t now = NowMs();
         CVehicle* v = nullptr;
         uint16_t car = CurrentCar(&v);
         if (car != g_car) {
@@ -352,14 +501,24 @@ public:
             g_syncDue = false;
             g_pendingTune = -1;
             g_sentTrack = -1;
-            g_songPending = false;
+            g_carSong.pending = false;
         }
+        uint8_t* vs = CivilianRadio();
+        bool shared = car && vs && CarRadio(now, car, v);
+        // our radio is our own: alone in a car with a radio (or in one of this game only), its leader, the headphones
+        bool own = vs ? (!shared || g_leader) : headphones::Playing();
+        StationSync(now, own, vs);
+    }
+
+    static Radio& Instance() {
+        static Radio m;
+        return m;
+    }
+
+private:
+    // the radio of a car shared with other players: same station, the leader's song. True when others are in it.
+    static bool CarRadio(uint64_t now, uint16_t car, CVehicle* v) {
         g_leader = false;
-        if (!car || !CivilianRadio()) {
-            g_pendingTune = -1;
-            g_songPending = false;
-            return;
-        }
         uint8_t driver = 0xFF;
         std::set<uint8_t> others = Others(car, &driver);
         for (uint8_t id : others)
@@ -368,10 +527,9 @@ public:
         if (others.empty()) {
             g_pendingTune = -1;
             g_syncDue = false;
-            g_songPending = false;
-            return;
+            g_carSong.pending = false;
+            return false;
         }
-        uint64_t now = NowMs();
         if (g_pendingTune >= 0) {
             SendTune(car, g_pendingTune);
             LOGI("Radio: we tuned the car to station %d", g_pendingTune);
@@ -386,26 +544,22 @@ public:
         }
         g_leader = leader == Net().MyId();
         if (!g_leader) {
-            if (g_songPending && FollowSong(now)) g_songPending = false;
-            return;
+            FollowSong(g_carSong, now, CivilianRadio());
+            return true;
         }
-        g_songPending = false;
+        g_carSong.pending = false;
         int8_t station = -1;
-        if (!Settled(station) || station == kRadioEmergency) return;
+        if (!Settled(station) || station == kRadioEmergency) return true;
         Song song{};
         bool playing = PlayingSong(station, song);
         bool newTrack = playing && song.queue[0] != g_sentTrack;
-        if (!playing && now - g_tuneMs < kTuneSettleMs) return;  // the station alone: let a turn of the dial settle
-        if (!g_syncDue && !newTrack && now - g_syncMs < kSyncEveryMs) return;
+        if (!playing && now - g_tuneMs < kTuneSettleMs) return true;  // the station alone: let a turn of the dial settle
+        if (!g_syncDue && !newTrack && now - g_syncMs < kSyncEveryMs) return true;
         SendSync(car, station, playing ? &song : nullptr);
         g_syncDue = false;
         g_syncMs = now;
         g_sentTrack = playing ? song.queue[0] : -1;
-    }
-
-    static Radio& Instance() {
-        static Radio m;
-        return m;
+        return true;
     }
 };
 
@@ -422,7 +576,7 @@ void StationKey(int delta) {
     // the game adds the step to the dial right after the key: where it is going
     g_pendingTune = Fold(Field<int32_t>(Manager(), kStationsListed) + delta);
     g_tuneMs = NowMs();
-    g_songPending = false;
+    g_carSong.pending = false;
 }
 
 }  // namespace coop::radio

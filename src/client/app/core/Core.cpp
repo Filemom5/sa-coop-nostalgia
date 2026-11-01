@@ -15,6 +15,7 @@
 #include "entities/player/Players.h"
 #include "entities/session/Flow.h"
 #include "features/roof/Roof.h"
+#include "features/radio/Headphones.h"
 #include "features/story/contest/Contest.h"
 #include "features/story/missions/Missions.h"
 #include "features/teleport/Teleport.h"
@@ -347,6 +348,8 @@ void WriteDefaultConfig(const std::wstring& path) {
         "player_list = 113\r\n"
         "; Держаться за крышу машины (88 = X)\r\n"
         "roof_lock = 88\r\n"
+        "; Наушники: нажать - надеть/снять, держать + колесо мыши - станция (72 = H)\r\n"
+        "headphones = 72\r\n"
         "\r\n"
         "[debug]\r\n"
         "; Отладочная информация на экране и подробный лог. Включайте, если вас попросили прислать лог.\r\n"
@@ -436,6 +439,7 @@ bool OnKeyDown(int vk, bool repeat) {
     }
     if (ui::TheChat().IsOpen()) return true;
     if (repeat) return false;
+    if (vk != cfg.headphonesKey) headphones::OtherKey();  // a cheat being typed is no tap on the headphones' key
     if (vk == VK_ESCAPE && CutsceneSkipDecline()) return true;  // "watch on", not the pause menu
     if ((vk == 'Y' || vk == 'N') && !game::MenuActive() && (contest::Key(vk) || teleport::Key(vk == 'Y') || SideCallKey(vk == 'Y')))
         return true;  // a call, a request
@@ -462,6 +466,8 @@ bool OnKeyDown(int vk, bool repeat) {
     }
     if (vk == cfg.roofKey && !inMenu && !typingCheat && IsPlayerReady() && roof::Key())
         return true;  // holding on to a car's roof (Roof.cpp)
+    if (vk == cfg.headphonesKey && !inMenu && !typingCheat && IsPlayerReady())
+        headphones::KeyDown();  // the headphones (Headphones.cpp); H still reaches the game (the horn)
     if (vk == cfg.passengerKey && !inMenu && IsPlayerReady()) {
         Players::Instance().TryEnterAsPassenger();
         return false;  // G still reaches the game (gang recruiting)
