@@ -274,6 +274,7 @@ void NetClient::ThreadMain(std::string host, uint16_t port) {
         if (connected) {
             m_rtt = peer->roundTripTime;
             lastLoss = peer->packetLoss;
+            m_loss = peer->packetLoss;
             lastInTransit = peer->reliableDataInTransit;
             lastHeard = peer->lastReceiveTime;
         }

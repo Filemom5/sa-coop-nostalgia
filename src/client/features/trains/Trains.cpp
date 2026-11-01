@@ -8,6 +8,7 @@
 // it in its own game (its pad, CTrain::ProcessControl), and the train's own game follows (TRAIN_DRIVE) with the copy of
 // that player at its wheel (TRAIN_ENTER: its walk to the cab, which with no word there followed its owner up the step and
 // dropped back, "landing"). Every copy was locked, and the partner could not get into a train at all (Holder, 29.10).
+#include <algorithm>
 #include <cmath>
 #include <map>
 
@@ -57,7 +58,13 @@ struct Copy {
     uint8_t kind;
     float rail, speed;
     uint64_t ms;
+    bool placed = false;  // put on its owner's place once: from then on it slides there (OnPreProcess)
 };
+// Set on its owner's place every frame, the copy jumped back or on with each state (10 a second) by as much as that
+// state came early or late: the train of "Catalyst" flickered for the partners. It slides there instead, and only a
+// great distance (a respawn, the loop's end) puts it there at once.
+constexpr float kTrainSnap = 25.0f;
+constexpr float kTrainPull = 0.15f;  // of the distance to its place, each frame
 std::map<uint32_t, Copy> g_copies;  // by owner << 16 | its id
 bool g_randomOff = false;           // we switched the random trains off
 
@@ -331,7 +338,14 @@ public:
             CPed* drv = c.engine->Driver();
             c.engine->DoorLock() = (drv && drv->IsPlayer()) || HostMissionRecent(0) ? 2 : 1;  // CARLOCK_LOCKED, CARLOCK_UNLOCKED
             Speed(c.engine) = c.speed;
-            RailDistance(c.engine) = c.rail + c.speed * (float)(NowMs() - c.ms) / 20.0f;
+            // the owner's place now: as sent, moved on by the time since and the way here (the host's game is the
+            // server's: its states take half our ping)
+            float lead = (float)(NowMs() - c.ms) + (float)std::min<uint32_t>(Net().Rtt(), 300) * 0.5f;
+            float target = c.rail + c.speed * lead / 20.0f;
+            float& rail = RailDistance(c.engine);
+            float err = target - rail;
+            if (!c.placed || !std::isfinite(err) || std::fabs(err) > kTrainSnap) rail = target, c.placed = true;
+            else rail += err * kTrainPull;
             ++it;
         }
         // ours the other player drives: where its game has it, kept as a mission's from the clear-out far from our camera

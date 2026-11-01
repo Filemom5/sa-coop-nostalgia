@@ -69,6 +69,7 @@ public:
     void OnPostProcess() override;
 
     static Vehicles& Instance();
+    static inline uint32_t s_mirrorJumps = 0;  // copies put on their owner's place with a jump (NetStats counts them)
 
     NetVehicle* Find(uint16_t netId);
     // the record's vehicle is still there (one deleted in the last frame stays listed until OnPreProcess, after the

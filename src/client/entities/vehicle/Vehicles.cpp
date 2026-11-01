@@ -819,7 +819,10 @@ void Vehicles::ApplyMirror(NetVehicle& nv, float dt) {
         nv.bumpMs = NowMs();
     uint64_t sinceBump = NowMs() - nv.bumpMs;
 
-    float age = std::min(0.3f, (float)(NowMs() - nv.recvMs) / 1000.0f);
+    // ahead by the time since the state and the way here; up to half a second of missing states (a hitch of the owner's
+    // game, a lost packet or two) the copy drives on instead of standing until it is put back with a jump
+    float way = std::min(0.15f, (float)Net().Rtt() / 2000.0f);
+    float age = std::min(0.5f, (float)(NowMs() - nv.recvMs) / 1000.0f + way);
     CVector target = st.pos + st.vel * age;
     // the turn as far on as the position: pulled back each frame to where the state left it, a car spun on the spot
     // (W+S, a donut) turned slower here and jerked back with every state (issue #22)
@@ -840,15 +843,20 @@ void Vehicles::ApplyMirror(NetVehicle& nv, float dt) {
         SetVehicleMatrix(v, target, targetRot);
         v->MoveSpeed() = CVector{};
         v->TurnSpeed() = CVector{};
-    } else if (dist > 10.0f) {
+    } else if (dist > std::max(10.0f, st.vel.Length() * 0.5f)) {  // fast, a few metres behind are no reason to jump
         SetVehicleMatrix(v, target, targetRot);
         v->MoveSpeed() = st.vel * (1.0f / 50.0f);
         v->TurnSpeed() = st.turn * (1.0f / 50.0f);
+        ++s_mirrorJumps;
     } else if (sinceBump < 600) {
         // the hit's own motion, this game's physics
     } else if (!resting) {
         bool easing = sinceBump < 2000;  // back from a hit: slowly
-        CVector cmd = st.vel + err * (easing ? 1.5f : 4.0f);  // converge in ~1/4 s
+        // converge in ~1/4 s, but no lurch: the pull is held under its own speed's half and a bit
+        CVector pull = err * (easing ? 1.5f : 4.0f);
+        float most = 6.0f + st.vel.Length() * 0.5f;
+        if (float p = pull.Length(); p > most) pull = pull * (most / p);
+        CVector cmd = st.vel + pull;
         v->MoveSpeed() = cmd * (1.0f / 50.0f);
         v->TurnSpeed() = st.turn * (1.0f / 50.0f);
         if (CMatrix* m = v->Matrix()) {

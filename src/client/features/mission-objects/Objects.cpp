@@ -3,6 +3,7 @@
 // those, sends their moves and their end, and applies the hits the partner's player lands on the copies. The copies
 // are frozen, and nothing in the partner's game damages them: a hit by its player goes to the host as
 // CObject::ObjectDamage, and a copy breaks when the host's object did.
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <vector>
@@ -50,6 +51,12 @@ struct NetObject {
     uint64_t enterMs = 0;    // host: that player pressed its enter button holding it
     uint64_t heldMs = 0;     // host: since then
     bool copyHeld = false;   // host: its copy took it up; partner: the host's copy was given it
+    // partner: the host's states come 10 times a second; set on each, a crate thrown off a train ("Catalyst") stood and
+    // jumped. The copy goes there smoothly every frame, a little ahead by the speed between the last two (SmoothCopies)
+    bool smooth = false;
+    CVector tgtPos, tgtVel;
+    Quat tgtRot;
+    uint64_t tgtMs = 0;
 };
 
 // A crate the mission lets its player carry (SET_OBJECT_AS_STEALABLE: CObject::m_nObjectFlags +0x140, bIsLiftable): the
@@ -118,6 +125,27 @@ void Place(CObject* o, const CVector& pos, const Quat& rot) {
     CallMethod<0x446F90>(o);  // CEntity::UpdateRW
     CallMethod<0x532B00>(o);  // CEntity::UpdateRwFrame
     Call<0x563220>(o);        // CWorld::Add
+}
+
+constexpr float kObjSnap = 6.0f;      // further from the host's place than this, the copy is put there at once
+constexpr float kObjMaxSpeed = 60.0f; // a step faster than this between two states is a jump (a respawn), no speed
+
+// partner: the host's latest place for the copy, and its speed from the one before (SmoothCopies takes it there)
+void TakeTarget(NetObject& no, const CVector& pos, const Quat& rot) {
+    uint64_t now = NowMs();
+    CVector vel{};
+    if (no.smooth && no.tgtMs && now > no.tgtMs) {
+        float dt = std::max((float)(now - no.tgtMs) / 1000.0f, 0.05f);
+        CVector v = (pos - no.tgtPos) * (1.0f / dt);
+        if (v.Length() < kObjMaxSpeed) vel = no.tgtVel * 0.5f + v * 0.5f;  // the receive times jitter: half the old
+    }
+    bool far = !no.smooth || (pos - no.obj->GetPosition()).Length() > kObjSnap;
+    no.tgtPos = pos;
+    no.tgtRot = rot;
+    no.tgtVel = vel;
+    no.tgtMs = now;
+    no.smooth = true;
+    if (far) Place(no.obj, pos, rot);
 }
 
 uint8_t FlagsOf(CObject* o) {
@@ -527,6 +555,27 @@ void HandlePhoto(uint8_t from, Reader& r) {
     LOGI("Player %d photographed %d of our people and %d of our objects", from, peds, objects);
 }
 
+// partner: each copy on its way to the host's place, a little ahead by its speed (the way here and the time since),
+// every frame. One at rest stays put; one far off is put there at once (TakeTarget)
+void SmoothCopies() {
+    uint64_t now = NowMs();
+    float way = std::min(0.15f, (float)Net().Rtt() / 2000.0f);
+    for (auto& [id, no] : g_mirrors) {
+        if (!no.smooth || id == g_holding || no.copyHeld || !Alive(no) || Broken(no.obj) || no.obj->AttachedTo()) continue;
+        float age = std::min(0.3f, (float)(now - no.tgtMs) / 1000.0f + way);
+        CVector want = no.tgtPos + no.tgtVel * age;
+        CVector cur = no.obj->GetPosition();
+        CVector err = want - cur;
+        float dist = err.Length();
+        if (dist > kObjSnap) {
+            Place(no.obj, want, no.tgtRot);
+            continue;
+        }
+        if (dist < 0.002f && no.tgtVel.Length() < 0.01f) continue;  // in place and still
+        Place(no.obj, cur + err * 0.35f, Quat::Slerp(RotationOf(no.obj), no.tgtRot, 0.35f));
+    }
+}
+
 class Objects : public Module {
 public:
     const char* Name() const override { return "Objects"; }
@@ -583,7 +632,10 @@ public:
             } else if (auto m = g_mirrors.find(id); m != g_mirrors.end() && Alive(m->second)) {
                 NetObject& no = m->second;
                 if (no.flags != flags) no.flags = flags, ApplyLiftable(no);
-                if (id == g_holding) return;  // in our player's hands: the hold task moves it
+                if (id == g_holding) {  // in our player's hands: the hold task moves it
+                    no.smooth = false;
+                    return;
+                }
                 no.area = area;
                 no.obj->AreaCode() = area;
                 // in the host's hands: on its copy's chest (the copy plays the host's carry, Anims), through the doors with it
@@ -593,13 +645,14 @@ public:
                     if (no.obj->AttachedTo() != (CEntity*)host->ped)
                         Cmd(0x069B).I(no.handle).I(host->pedHandle).F(0.0f).F(0.45f).F(0.25f).F(0.0f).F(0.0f).F(0.0f).Run();  // ATTACH_OBJECT_TO_CHAR
                     no.obj->AreaCode() = host->ped->AreaCode();
+                    no.smooth = false;
                     return;
                 }
                 if (no.copyHeld) {
                     no.copyHeld = false;
                     if (no.obj->AttachedTo()) Cmd(0x0682).I(no.handle).F(0.0f).F(0.0f).F(0.0f).I(0).Run();  // DETACH_OBJECT
                 }
-                Place(no.obj, {p.x, p.y, p.z}, q);
+                TakeTarget(no, {p.x, p.y, p.z}, q);
                 if (m->second.attached != attached || m->second.scale != scale) {
                     m->second.attached = attached;
                     m->second.scale = scale;
@@ -674,6 +727,7 @@ public:
         } else {
             if (!g_pending.empty()) CreatePending();
             WatchHold();
+            SmoothCopies();
         }
     }
 

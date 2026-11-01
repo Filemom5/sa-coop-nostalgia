@@ -33,6 +33,7 @@ public:
 
     State GetState() const { return m_state.load(); }
     uint32_t Rtt() const { return m_rtt.load(); }
+    float LossPercent() const { return (float)m_loss.load() * 100.0f / 65536.0f; }  // ENET_PEER_PACKET_LOSS_SCALE
     // Set when a Connected -> Disconnected transition happened (cleared by the caller).
     bool TakeDisconnectEvent() { return m_disconnectEvent.exchange(false); }
     bool TakeConnectEvent() { return m_connectEvent.exchange(false); }
@@ -49,6 +50,7 @@ private:
     std::atomic<bool> m_quit{false};
     std::atomic<State> m_state{State::Idle};
     std::atomic<uint32_t> m_rtt{0};
+    std::atomic<uint32_t> m_loss{0};  // ENet's packet loss, of 65536
     std::atomic<bool> m_disconnectEvent{false};
     std::atomic<bool> m_connectEvent{false};
     std::atomic<uint64_t> m_bytesIn{0}, m_bytesOut{0};
