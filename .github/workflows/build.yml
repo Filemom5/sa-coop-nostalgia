@@ -53,6 +53,23 @@ jobs:
           Compress-Archive -Path "nostalgia/Jogar SA-COOP.bat", "nostalgia/coop" -DestinationPath release/SA-COOP-Nostalgia-instalador.zip
           Get-ChildItem release
 
+      # Open Limit Adjuster (MIT, github.com/GTAmodding/III.VC.SA.LimitAdjuster): its .asi as released, our .ini
+      # (nostalgia/limit-adjuster: more peds and vehicles for 4 players). The updater installs them only for whoever has
+      # no limit adjuster yet.
+      - name: Open Limit Adjuster
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1.7.2 --repo GTAmodding/III.VC.SA.LimitAdjuster --dir ola
+          Get-ChildItem ola -Filter *.zip | ForEach-Object { Expand-Archive $_.FullName -DestinationPath (Join-Path ola $_.BaseName) -Force }
+          $asi = @(Get-ChildItem ola -Recurse -Filter III.VC.SA.LimitAdjuster.asi)
+          $asi | ForEach-Object { "$($_.FullName) $($_.Length) $((Get-FileHash $_.FullName).Hash)" }
+          if ($asi.Count -eq 0) { throw 'III.VC.SA.LimitAdjuster.asi is not in the release' }
+          Copy-Item $asi[0].FullName release/
+          Copy-Item nostalgia/limit-adjuster/III.VC.SA.LimitAdjuster.ini release/
+          Copy-Item nostalgia/limit-adjuster/OpenLimitAdjuster-LICENSE.txt release/
+
       - uses: actions/upload-artifact@v4
         with:
           name: SA-COOP-Nostalgia
@@ -88,3 +105,6 @@ jobs:
             release/coop-server.exe
             release/atualizador.ps1
             release/SA-COOP-Nostalgia-instalador.zip
+            release/III.VC.SA.LimitAdjuster.asi
+            release/III.VC.SA.LimitAdjuster.ini
+            release/OpenLimitAdjuster-LICENSE.txt

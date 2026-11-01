@@ -15,6 +15,8 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
 - **Proteção contra o crash** de personagem sem animação (`0x4D1750`).
 - **Cópias mais suaves** para quem não é o host: trem, caixas e objetos de missão e carros dos outros.
 - **Registro de rede** no `coop\coop.log` a cada 10 s (ping, perda, FPS, atrasos, teleportes).
+- **Open Limit Adjuster** com 500 pedestres e 500 carros (o jogo tem 140 e 110), contra o crash `0x544BC8` com 4
+  jogadores. O atualizador só instala se você ainda não tiver um limit adjuster (na pasta do jogo ou em `scripts`).
 
 ## Instalação (primeira vez)
 
@@ -37,5 +39,7 @@ O `coop-server.exe` desta versão aceita até 4 jogadores. Se existir `coop\serv
 ## Código e licença
 
 O código-fonte é o do SA:COOP com as mudanças acima (veja o histórico de commits). Compilação: `tools/build.py`
-(llvm-mingw). Licença MIT, a mesma do projeto original: veja [LICENSE](LICENSE). Leia-me original:
+(llvm-mingw). Licença MIT, a mesma do projeto original: veja [LICENSE](LICENSE). O
+[Open Limit Adjuster](https://github.com/GTAmodding/III.VC.SA.LimitAdjuster) (v1.7.2, MIT) vem da versão oficial dele;
+o `.ini` ajustado está em `nostalgia/limit-adjuster`. Leia-me original:
 [русский](README.ru.md), [English](README.en.md).
