@@ -348,8 +348,8 @@ void WriteDefaultConfig(const std::wstring& path) {
         "player_list = 113\r\n"
         "; Держаться за крышу машины (88 = X)\r\n"
         "roof_lock = 88\r\n"
-        "; Наушники: нажать - надеть/снять, держать + колесо мыши - станция (72 = H)\r\n"
-        "headphones = 72\r\n"
+        "; Наушники: нажать - надеть/снять, держать + колесо мыши - станция (74 = J)\r\n"
+        "headphones = 74\r\n"
         "\r\n"
         "[debug]\r\n"
         "; Отладочная информация на экране и подробный лог. Включайте, если вас попросили прислать лог.\r\n"
@@ -467,7 +467,7 @@ bool OnKeyDown(int vk, bool repeat) {
     if (vk == cfg.roofKey && !inMenu && !typingCheat && IsPlayerReady() && roof::Key())
         return true;  // holding on to a car's roof (Roof.cpp)
     if (vk == cfg.headphonesKey && !inMenu && !typingCheat && IsPlayerReady())
-        headphones::KeyDown();  // the headphones (Headphones.cpp); H still reaches the game (the horn)
+        headphones::KeyDown();  // the headphones (Headphones.cpp); the key still reaches the game
     if (vk == cfg.passengerKey && !inMenu && IsPlayerReady()) {
         Players::Instance().TryEnterAsPassenger();
         return false;  // G still reaches the game (gang recruiting)

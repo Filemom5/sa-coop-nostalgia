@@ -9,6 +9,9 @@
 // radio they are off the head (its radio plays). The other players are told (G_RADIO OP_HEADSET, Radio.cpp) and see them
 // on our copy.
 //
+// Each player picks the headset's colours (/fone cor preto, branco, rosa, azul, vermelho, cinza; kept in coop.ini) and
+// the others see them: they go with OP_HEADSET.
+//
 // /fone x y z rx ry rz: moves the model on the head (metres along the head bone's axes) and turns it (degrees about
 // them), to fit it in a test; /fone alone shows the values in use.
 #include <cstdint>
@@ -29,6 +32,7 @@
 #include "shared/game/Anim.h"
 #include "shared/game/Game.h"
 #include "shared/game/Script.h"
+#include "common/lib/ini/Ini.h"
 #include "shared/lib/core/Core.h"
 #include "shared/lib/memory/Memory.h"
 #include "shared/ui/chat/Chat.h"
@@ -55,6 +59,21 @@ struct RwMemory {
 struct RwV3d {
     float x, y, z;
 };
+// the colours of the body, the cushions and the ring (the model's materials 0, 1, 2)
+struct Colours {
+    const char* name;
+    uint8_t rgb[3][3];
+};
+constexpr Colours kColours[] = {
+    {"preto", {{28, 28, 32}, {18, 18, 20}, {255, 95, 176}}},
+    {"branco", {{235, 235, 238}, {60, 60, 64}, {255, 95, 176}}},
+    {"rosa", {{255, 120, 190}, {40, 30, 40}, {255, 255, 255}}},
+    {"azul", {{40, 90, 200}, {20, 20, 30}, {120, 220, 255}}},
+    {"vermelho", {{200, 30, 40}, {25, 20, 20}, {255, 255, 255}}},
+    {"cinza", {{110, 110, 118}, {30, 30, 34}, {255, 95, 176}}},
+};
+constexpr uint8_t kColourCount = sizeof(kColours) / sizeof(kColours[0]);
+
 struct Fit {
     float x = 0, y = 0, z = 0;     // metres, along the head bone's axes
     float rx = 0, ry = 0, rz = 0;  // degrees, about them
@@ -71,7 +90,14 @@ bool g_told = false;         // the others have it as shown
 uint64_t g_tellMs = 0;
 bool g_animPending = false;  // the animation waits for its block
 uint64_t g_animAskMs = 0;
-std::map<uint8_t, uint64_t> g_remote;  // the players whose copies wear them, and when that was last told
+struct Remote {
+    uint64_t toldMs = 0;
+    uint8_t colour = 0;
+};
+std::map<uint8_t, Remote> g_remote;  // the players whose copies wear them: when that was last told, their colours
+uint8_t g_colour = 0;                // ours (an index of kColours)
+uint8_t g_toldColour = 0;
+uint8_t* g_materials[3] = {};        // the model's RpMaterials
 
 using VoidFn = void(__cdecl*)();
 VoidFn g_origRender = nullptr;
@@ -86,7 +112,19 @@ void* Model() {
         Call<0x7ECE20, int>(stream, (void*)nullptr);                                       // RwStreamClose
     }
     if (g_model) {
-        LOGI("Headphones: the headset's model is ready");
+        // its materials, to colour them for each player: the clump's atomic -> geometry -> material list
+        uint8_t* atomic = nullptr;
+        using AtomicFn = void*(__cdecl*)(void*, void*);
+        AtomicFn first = [](void* a, void* out) -> void* {
+            *(void**)out = a;
+            return nullptr;  // stop at the first
+        };
+        Call<0x749B70, void*>(g_model, first, (void*)&atomic);  // RpClumpForAllAtomics
+        uint8_t* geometry = atomic ? Field<uint8_t*>(atomic, 0x18) : nullptr;           // RpAtomic::geometry
+        uint8_t** materials = geometry ? Field<uint8_t**>(geometry, 0x20) : nullptr;    // RpGeometry::matList.materials
+        int count = geometry ? Field<int>(geometry, 0x24) : 0;                          // ::numMaterials
+        for (int i = 0; i < 3 && i < count && materials; ++i) g_materials[i] = materials[i];
+        LOGI("Headphones: the headset's model is ready (%d materials)", count);
     } else {
         g_modelFailed = true;
         LOGW("Headphones: the headset's model could not be read");
@@ -94,8 +132,20 @@ void* Model() {
     return g_model;
 }
 
-// the headset at a ped's head, lit as the ped
-void DrawOn(CPed* ped) {
+void Paint(uint8_t colour) {
+    const Colours& c = kColours[colour < kColourCount ? colour : 0];
+    for (int i = 0; i < 3; ++i) {
+        if (!g_materials[i]) continue;
+        uint8_t* rgba = g_materials[i] + 4;  // RpMaterial::color
+        rgba[0] = c.rgb[i][0];
+        rgba[1] = c.rgb[i][1];
+        rgba[2] = c.rgb[i][2];
+        rgba[3] = 255;
+    }
+}
+
+// the headset at a ped's head, lit as the ped, in its player's colours
+void DrawOn(CPed* ped, uint8_t colour) {
     void* clump = ped ? ped->RwObject() : nullptr;
     if (!clump || !ped->IsVisible()) return;
     CPlayerPed* me = FindPlayerPed(0);
@@ -120,6 +170,7 @@ void DrawOn(CPed* ped) {
     for (int i = 0; i < 3; ++i)
         if (turns[i] != 0) Call<0x7F1FD0, void*>(matrix, &kAxes[i], turns[i], kCombinePreConcat);  // RwMatrixRotate
     Call<0x7F0910, void*>(frame);    // RwFrameUpdateObjects
+    Paint(colour);
     bool lit = CallMethod<0x553F00, bool>(ped);  // CPed::SetupLighting
     Call<0x749B20, void*>(Model());             // RpClumpRender
     CallMethod<0x5533B0>(ped, (uint8_t)lit);    // CPed::RemoveLighting(bool): it takes what SetupLighting gave (ret 4)
@@ -128,10 +179,10 @@ void DrawOn(CPed* ped) {
 void __cdecl HookRenderWeaponPeds() {
     g_origRender();
     if ((!g_shown && g_remote.empty()) || !core::IsPlayerReady() || !Model()) return;
-    if (g_shown) DrawOn(FindPlayerPed(0));
-    for (const auto& [id, ms] : g_remote) {
+    if (g_shown) DrawOn(FindPlayerPed(0), g_colour);
+    for (const auto& [id, r] : g_remote) {
         RemotePlayer* rp = Players::Instance().Get(id);
-        if (rp && rp->ped) DrawOn(rp->ped);
+        if (rp && rp->ped) DrawOn(rp->ped, r.colour);
     }
 }
 
@@ -157,6 +208,18 @@ void PlayHandsToHead() {
     Cmd(0x0A1A).I(GetPedRef(me)).S("goggles_put_on").S("GOGGLES").F(4.0f).I(0).I(0).I(0).I(0).I(-1).Run();  // TASK_PLAY_ANIM_SECONDARY
 }
 
+uint8_t ColourByName(const std::string& name) {
+    for (uint8_t i = 0; i < kColourCount; ++i)
+        if (name == kColours[i].name) return i;
+    return 0xFF;
+}
+
+std::string ColourNames() {
+    std::string names;
+    for (const Colours& c : kColours) names += (names.empty() ? "" : ", ") + std::string(c.name);
+    return names;
+}
+
 void ShowFit() {
     ui::TheChat().AddSystem(Format("/fone %.3f %.3f %.3f %.0f %.0f %.0f", g_fit.x, g_fit.y, g_fit.z, g_fit.rx, g_fit.ry, g_fit.rz));
 }
@@ -173,11 +236,15 @@ public:
         g_told = false;
     }
     void OnPeerLeave(uint8_t id) override { g_remote.erase(id); }
+    void OnGameStarted() override {
+        uint8_t c = ColourByName(Cfg().headphonesColour);
+        g_colour = c == 0xFF ? 0 : c;
+    }
 
     void OnPostProcess() override {
         uint64_t now = NowMs();
         for (auto it = g_remote.begin(); it != g_remote.end();)
-            it = now - it->second > kRemoteFreshMs ? g_remote.erase(it) : std::next(it);
+            it = now - it->second.toldMs > kRemoteFreshMs ? g_remote.erase(it) : std::next(it);
         bool on = On();
         if (on != g_wasOn) {  // the key: the hands go to the head, the headset comes or goes when they get there
             g_wasOn = on;
@@ -198,15 +265,31 @@ public:
             g_told = false;
             return;
         }
-        if (g_shown != g_told || (g_shown && now - g_tellMs >= kTellEveryMs)) {
-            radio::SendHeadset(g_shown);
+        if (g_shown != g_told || (g_shown && (now - g_tellMs >= kTellEveryMs || g_colour != g_toldColour))) {
+            radio::SendHeadset(g_shown, g_colour);
             g_told = g_shown;
+            g_toldColour = g_colour;
             g_tellMs = now;
         }
     }
 
     bool OnCommand(const std::string& cmd, const std::vector<std::string>& args) override {
         if (cmd != "fone") return false;
+        if (!args.empty() && args[0] == "cor") {
+            uint8_t c = args.size() > 1 ? ColourByName(args[1]) : 0xFF;
+            if (c == 0xFF) {
+                ui::TheChat().AddSystem("/fone cor " + ColourNames());
+                return true;
+            }
+            g_colour = c;
+            Cfg().headphonesColour = kColours[c].name;
+            Ini ini;
+            ini.Load(Cfg().iniPath);
+            ini.Set("game", "headphones_colour", kColours[c].name);
+            ini.Save(Cfg().iniPath);
+            ui::TheChat().AddSystem(std::string("/fone cor ") + kColours[c].name);
+            return true;
+        }
         if (args.size() >= 3) {
             float* fields[6] = {&g_fit.x, &g_fit.y, &g_fit.z, &g_fit.rx, &g_fit.ry, &g_fit.rz};
             for (size_t i = 0; i < args.size() && i < 6; ++i) *fields[i] = (float)std::atof(args[i].c_str());
@@ -226,8 +309,8 @@ struct Reg {
 } g_reg;
 }  // namespace
 
-void RemoteHeadset(uint8_t id, bool on) {
-    if (on) g_remote[id] = NowMs();
+void RemoteHeadset(uint8_t id, bool on, uint8_t colour) {
+    if (on) g_remote[id] = Remote{NowMs(), colour < kColourCount ? colour : (uint8_t)0};
     else g_remote.erase(id);
 }
 

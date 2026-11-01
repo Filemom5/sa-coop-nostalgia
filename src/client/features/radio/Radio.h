@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 namespace coop::radio {
 
@@ -6,7 +7,8 @@ namespace coop::radio {
 // station, -1 the last one). Called from the key's hook in Players.cpp, before the game moves the dial.
 void StationKey(int delta);
 
-// Tells the other players whether our player wears the headphones (Headset.cpp), so that his copy wears them too.
-void SendHeadset(bool on);
+// Tells the other players whether our player wears the headphones (Headset.cpp), and their colours, so that his copy
+// wears them too.
+void SendHeadset(bool on, uint8_t colour);
 
 }  // namespace coop::radio

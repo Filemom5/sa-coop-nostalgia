@@ -1,7 +1,15 @@
 ## Novo nesta versão
 
-- **Crash ao pôr o fone corrigido:** o jogo fechava no instante em que o fone aparecia na cabeça.
-- Para ajustar a posição do fone: `/fone x y z rx ry rz` no chat (`/fone` sozinho mostra os valores).
+- **Fone agora no J** (era H). No GTA, o H a pé é o comando "grupo: recuar" e travava o W enquanto estava apertado.
+  Toque **J** para pôr e tirar; segurando **J**, a rodinha troca a estação.
+- **Mesma música ao voltar para uma estação:** ao trocar de estação no fone, a anterior fica guardada como no rádio do
+  carro, com o chiado de sintonia entre uma e outra.
+- **Fone novo, mais detalhado:** conchas ovais com almofada, arco acolchoado mais alto (não entra mais na cabeça).
+- **Cores do fone:** `/fone cor preto`, `branco`, `rosa`, `azul`, `vermelho` ou `cinza`. Os outros veem a sua cor.
+
+## Da versão 8
+
+- Crash ao pôr o fone corrigido.
 
 ## Da versão 7
 
@@ -9,9 +17,9 @@
 
 ## Das versões 5 e 6
 
-- **Fone na cabeça:** ao tocar **H**, o personagem leva as mãos à cabeça e o fone aparece; os outros também veem.
+- **Fone na cabeça:** ao pôr o fone, o personagem leva as mãos à cabeça e o fone aparece; os outros também veem.
 - **Rádio igual para todo mundo** na mesma estação, mesmo em carros diferentes.
-- **Fone de ouvido:** **H** liga e desliga; segurando **H**, a rodinha troca a estação.
+- **Fone de ouvido:** liga e desliga; segurando a tecla, a rodinha troca a estação.
 - **MP3 na tela** com o nome da estação.
 
 ## Das versões anteriores

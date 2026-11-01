@@ -1,7 +1,9 @@
 // Headphones, as in GTA 6: a station of the radio heard on foot.
 //
-// A tap on the key (keys/headphones in coop.ini, H) puts them on or takes them off; while it is held, the mouse wheel
-// turns their dial (up the next station, down the last one) and the weapons stay as they are. The game's own radio plays
+// A tap on the key (keys/headphones in coop.ini, J) puts them on or takes them off; while it is held, the mouse wheel
+// turns their dial (up the next station, down the last one) and the weapons stay as they are. A turn of the dial goes as
+// a car radio's: the station left is stopped first (that is when the game keeps its place: back on it, the same song goes
+// on), the static plays, and the station turned to starts once the dial rests. The game's own radio plays
 // them, started as a car's would (CAudioEngine::StartRadio: the station goes on where it was). In a vehicle with a radio
 // that radio plays as always; out of it the headphones play again, on their station. For the other players they are one
 // more radio of that station (Radio.cpp: everyone on a station hears the song of whoever has listened to it longest).
@@ -40,6 +42,7 @@ constexpr int8_t kFirstStation = 1, kLastMusicStation = 11, kUserTracksStation =
 constexpr uint64_t kTapMs = 600;         // held longer than this, the key was no tap
 constexpr uint64_t kTapWaitMs = 400;     // a tap waits this long: another letter meanwhile was a cheat being typed
 constexpr uint64_t kRestartGapMs = 2000;  // the radio stopped by something else (a cutscene): start it again after this
+constexpr uint64_t kTuneRestMs = 600;    // the dial resting this long, its station starts
 constexpr uint64_t kShowMs = 5000;       // the MP3 player stays on the screen this long after a change
 constexpr uint64_t kFadeMs = 400;
 
@@ -51,6 +54,7 @@ bool g_turned = false;      // the wheel turned the dial while it was held
 uint64_t g_heldMs = 0;
 uint64_t g_tapMs = 0;       // a tap waiting to count
 uint64_t g_startMs = 0;
+uint64_t g_tuneMs = 0;      // the dial was turned then: its station starts once it rests
 uint64_t g_showUntilMs = 0;
 
 uint8_t* Manager() { return (uint8_t*)kRadio; }
@@ -81,9 +85,17 @@ void Start() {
     g_startMs = NowMs();
 }
 
+void Static(bool on) {  // the noise of a turning dial (AE_FRONTEND_RADIO_RETUNE_START / _STOP)
+    CallMethod<0x506EA0>((void*)kAudioEngine, on ? 34 : 35, 0.0f, 1.0f);  // CAudioEngine::ReportFrontendAudioEvent
+}
+
 void Stop() {
-    if (g_playing && !VehicleRadio()) CallMethod<0x4E9820>(Manager(), (void*)nullptr, (uint8_t)0);  // StopRadio
+    if (g_playing && !VehicleRadio()) {
+        CallMethod<0x4E9820>(Manager(), (void*)nullptr, (uint8_t)0);  // CAERadioTrackManager::StopRadio: keeps its place
+        Static(false);
+    }
     g_playing = false;
+    g_tuneMs = 0;
 }
 
 void Toggle() {
@@ -103,8 +115,19 @@ void Turn(int delta) {
     int count = last - kFirstStation + 1;
     g_station = (int8_t)(kFirstStation + ((g_station - kFirstStation + delta) % count + count) % count);
     g_on = true;
-    if (g_playing && !VehicleRadio()) Start();
+    if (g_playing && !VehicleRadio()) {
+        if (RadioOn()) CallMethod<0x4E9820>(Manager(), (void*)nullptr, (uint8_t)0);  // StopRadio: the station left keeps its place
+        Static(true);
+        g_tuneMs = NowMs();
+    }
     Show();
+}
+
+// the key's name for the hints (a letter or a digit; else its code)
+std::string KeyName() {
+    int vk = Cfg().headphonesKey;
+    if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9')) return std::string(1, (char)vk);
+    return Format("%d", vk);
 }
 
 // The MP3 player: a small dark device with a lit screen, boxy as the game's own menus.
@@ -167,7 +190,9 @@ void DrawPlayer(float alpha) {
         g.Text(ui::FONT_NORMAL, bx + btw / 2, bty + 5 * s, labels[i], c(0xFFD6D2E6), ui::TEXT_CENTER);
     }
     // what the keys do
-    g.Text(ui::FONT_SMALL, x + w / 2, y + h + 10 * s, TR("H: надеть / снять   H + колесо: станция", "H: on / off   H + wheel: station"),
+    std::string key = KeyName();
+    g.Text(ui::FONT_SMALL, x + w / 2, y + h + 10 * s,
+           Format(TR("%s: надеть / снять   %s + колесо: станция", "%s: on / off   %s + wheel: station"), key.c_str(), key.c_str()),
            c(0xFFFFFFFF), ui::TEXT_CENTER | ui::TEXT_OUTLINE);
 }
 
@@ -199,6 +224,13 @@ public:
             return;
         }
         if (!g_on || CutsceneRunning() || MenuActive()) return;
+        if (g_tuneMs) {  // the dial turned: its station starts once it rests
+            if (now - g_tuneMs >= kTuneRestMs && !RadioOn()) {
+                g_tuneMs = 0;
+                Start();
+            }
+            return;
+        }
         if (!RadioOn() && now - g_startMs >= kRestartGapMs) Start();  // put on, out of a car, after a cutscene
     }
 

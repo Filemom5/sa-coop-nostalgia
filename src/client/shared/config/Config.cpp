@@ -80,6 +80,9 @@ bool ClientConfig::Load(const std::wstring& coopDirectory) {
     playerListKey = ini.GetInt("keys", "player_list", playerListKey);
     roofKey = ini.GetInt("keys", "roof_lock", roofKey);
     headphonesKey = ini.GetInt("keys", "headphones", headphonesKey);
+    // H, the first one, is the game's "group: back" on foot, which also stops walking forward while it is held
+    if (headphonesKey == 0x48) headphonesKey = 0x4A;
+    headphonesColour = ini.Get("game", "headphones_colour", headphonesColour);
 
     debugOverlay = ini.GetBool("debug", "overlay", debugOverlay);
     cleanScreen = ini.GetBool("debug", "clean_screen", cleanScreen);

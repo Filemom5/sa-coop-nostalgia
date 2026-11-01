@@ -23,8 +23,8 @@
 //    someone getting in, on each new track and every 3 s while players share the car.
 //  * OP_STATION: the station of a radio of its own (car: the sender's, or 0), u32 ms it has listened to it, then its song
 //    as in OP_SYNC. Sent on a new track, a change of station and every 3 s; station 13 (off) when it stops telling.
-//  * OP_HEADSET: the sender wears the headphones (station 1) or not (0): his copy wears them too (Headset.cpp). Sent on
-//    a change and every 5 s while he wears them.
+//  * OP_HEADSET: the sender wears the headphones (station 1) or not (0): his copy wears them too (Headset.cpp); then u8
+//    their colours (absent from a game before the colours). Sent on a change and every 5 s while he wears them.
 #include "features/radio/Radio.h"
 
 #include <algorithm>
@@ -448,7 +448,8 @@ void Handle(uint8_t from, Reader& r) {
     }
     if (!r.Ok() || from == Net().MyId()) return;
     if (op == OP_HEADSET) {
-        headphones::RemoteHeadset(from, station != 0);
+        uint8_t colour = r.U8();
+        headphones::RemoteHeadset(from, station != 0, r.Ok() ? colour : 0);
         return;
     }
     if (station <= kRadioEmergency || station > kRadioOff) return;
@@ -578,12 +579,13 @@ struct Reg {
 } g_reg;
 }  // namespace
 
-void SendHeadset(bool on) {
+void SendHeadset(bool on, uint8_t colour) {
     if (!Net().Online()) return;
     Writer w(proto::G_RADIO);
     w.U8(OP_HEADSET);
     w.U16(0);
     w.I8(on ? 1 : 0);
+    w.U8(colour);
     Net().Send(proto::CH_RELIABLE, w);
 }
 
