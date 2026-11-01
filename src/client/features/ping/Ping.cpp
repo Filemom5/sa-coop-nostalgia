@@ -1,8 +1,10 @@
-// Quick marks ("pings"): the key (keys/ping in coop.ini, Z) marks what the camera looks at, the middle of the screen: a
-// place, a car or a person. Every player sees it for 20 s, in the colour of who made it (its mark on the radar): on the
-// screen with that player's name and the distance (at the screen's edge with an arrow when out of view), and on the radar
-// and the map. A car or person marked is followed while this game knows it (by its network id; a player by its id).
-// One mark per player: a new one takes the place of the last; the key twice quickly takes ours away.
+// Quick marks ("pings"): the key (keys/ping in coop.ini, Z) marks what the aim points at (the crosshair's place on the
+// screen, where it shows when aiming; the middle in a first-person view and in a vehicle): a place, a car or a person
+// (one near the line counts too). Every player sees it for 20 s in the colour of who made it (its mark on the radar,
+// chosen in F9): on the screen with that player's name in that colour and the distance (at the screen's edge with an
+// arrow when out of view), and on the radar and the map. A car or person marked is followed: the game that made the mark
+// sends where it is (the others may not have that car or person, as with the street's own people); a player is found
+// in each game. One mark per player: a new one takes the place of the last; the key twice quickly takes ours away.
 #include "features/ping/Ping.h"
 
 #include <algorithm>
@@ -10,13 +12,12 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "common/api/protocol/Protocol.h"
 #include "common/lib/log/Log.h"
 #include "common/lib/util/Util.h"
-#include "entities/ped/Peds.h"
 #include "entities/player/Players.h"
-#include "entities/vehicle/Vehicles.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
 #include "shared/game/Game.h"
@@ -29,23 +30,26 @@ namespace {
 using namespace game;
 
 enum Kind : uint8_t { KIND_PLACE = 0, KIND_VEHICLE = 1, KIND_PED = 2, KIND_PLAYER = 3 };
-enum Op : uint8_t { OP_MARK = 1, OP_CLEAR = 2 };
+enum Op : uint8_t { OP_MARK = 1, OP_CLEAR = 2, OP_MOVE = 3 };
 
-constexpr float kRange = 400.0f;          // how far the camera's line goes
+constexpr float kRange = 400.0f;          // how far the aim's line goes
 constexpr uint64_t kLifeMs = 20000;       // a mark lasts
 constexpr uint64_t kFadeMs = 2000;        // ...fading out at its end
 constexpr uint64_t kTwiceMs = 400;        // the key twice within: ours away
+constexpr uint64_t kMoveEveryMs = 200;    // a followed car or person: where it is, this often
 constexpr uintptr_t kAudioEngine = 0xB6BC90;
 constexpr int kSoundMark = 11;            // AE_FRONTEND_PICKUP_INFO
 constexpr int kSoundNothing = 4;          // AE_FRONTEND_ERROR
 
 struct Mark {
     uint8_t kind = KIND_PLACE;
-    CVector pos;             // the place (a followed one's last place)
-    uint16_t netId = 0;      // a car's or person's
-    uint8_t player = 0;      // a player's
+    CVector pos;             // the place (a followed one's: where it is, or was last)
+    uint8_t player = 0;      // KIND_PLAYER: whose
     int8_t area = 0;         // the interior it was made in
     uint64_t atMs = 0;
+    int handle = -1;         // ours: the car or person followed (the script's handle)
+    uint64_t sentMs = 0;     // ours: its place sent last then, and that place
+    CVector sentPos;
 };
 
 std::map<uint8_t, Mark> g_marks;  // by the player who made it (ours under our id)
@@ -63,32 +67,38 @@ void Send(uint8_t op, const Mark& m) {
     w.U8(op);
     w.U8(m.kind);
     w.Vec({m.pos.x, m.pos.y, m.pos.z});
-    w.U16(m.netId);
+    w.U16(0);  // (a net id: unused, the place is sent)
     w.U8(m.player);
     w.I8(m.area);
-    Net().Send(proto::CH_RELIABLE, w);
+    Net().Send(op == OP_MOVE ? proto::CH_STATE : proto::CH_RELIABLE, w);
 }
 
-// where the mark is now (a followed car or person where it is, a bit above it)
-CVector Where(Mark& m) {
-    CEntity* e = nullptr;
-    float above = 0.3f;
-    if (m.kind == KIND_VEHICLE) {
-        if (NetVehicle* nv = Vehicles::Instance().Find(m.netId); nv && Vehicles::Alive(*nv)) e = (CEntity*)nv->veh, above = 1.6f;
-    } else if (m.kind == KIND_PED) {
-        int h = Peds::Instance().HandleOf(m.netId);
-        if (CPed* p = h >= 0 ? GetPed(h) : nullptr) e = (CEntity*)p, above = 1.2f;
-    } else if (m.kind == KIND_PLAYER) {
-        CPed* p = nullptr;
-        if (m.player == Me()) p = FindPlayerPed(0);
-        else if (RemotePlayer* rp = Players::Instance().Get(m.player)) p = rp->ped;
-        if (p && IsPedValid(p)) e = p->InVehicle() && p->Vehicle() ? (CEntity*)p->Vehicle() : (CEntity*)p, above = 1.2f;
+// the car or person a mark follows here, if it still exists
+CEntity* Followed(const Mark& m, uint8_t owner) {
+    if (m.kind == KIND_PLAYER) {
+        CPed* p = m.player == Me() ? (CPed*)FindPlayerPed(0) : nullptr;
+        if (m.player != Me())
+            if (RemotePlayer* rp = Players::Instance().Get(m.player)) p = rp->ped;
+        if (!p || !IsPedValid(p)) return nullptr;
+        return p->InVehicle() && p->Vehicle() ? (CEntity*)p->Vehicle() : (CEntity*)p;
     }
-    if (e) m.pos = e->GetPosition();
+    if (owner != Me() || m.handle < 0) return nullptr;
+    if (m.kind == KIND_VEHICLE) return (CEntity*)GetVehicle(m.handle);
+    if (m.kind == KIND_PED) {
+        CPed* p = GetPed(m.handle);
+        return p && p->InVehicle() && p->Vehicle() ? (CEntity*)p->Vehicle() : (CEntity*)p;
+    }
+    return nullptr;
+}
+
+// where the mark is drawn: a bit above what it marks
+CVector Where(Mark& m, uint8_t owner) {
+    if (CEntity* e = Followed(m, owner)) m.pos = e->GetPosition();
+    float above = m.kind == KIND_VEHICLE ? 1.6f : m.kind == KIND_PLACE ? 0.3f : 1.2f;
     return m.pos + CVector{0, 0, above};
 }
 
-uint32_t ColourOf(uint8_t player) {  // RGBA
+uint32_t ColourOf(uint8_t player) {  // RGBA, as its mark on the radar
     if (player == Me()) return Players::MarkRgba(Cfg().markColour);
     RemotePlayer* rp = Players::Instance().Get(player);
     return Players::MarkRgba(rp ? rp->markColour : std::string());
@@ -96,29 +106,65 @@ uint32_t ColourOf(uint8_t player) {  // RGBA
 
 std::string NameOf(uint8_t player) { return player == Me() ? Cfg().nickname : Net().PeerName(player); }
 
-// what the middle of the screen shows, as a mark of ours; false: nothing there
+// the aim's line: from the camera through the crosshair's place on the screen (CCamera::Find3rdPersonCamTargetVector's
+// sum); the middle of the screen in a first-person view (sniper, rocket launcher, camera...) and in a vehicle
+void AimLine(CPlayerPed* me, CVector& from, CVector& dir) {
+    from = cam::Source();
+    CVector front = cam::Front().Normalized(), up = cam::Up().Normalized();
+    dir = front;
+    // eCamMode: the sniper's, rocket launchers', first person, M16's, the helicopter's cannon, the camera's
+    static const uint16_t kMiddle[] = {7, 8, 16, 34, 39, 40, 41, 42, 45, 46, 51, 52};
+    uint16_t mode = cam::Mode();
+    bool middle = (me->InVehicle() && mode != 55) ||  // in a vehicle, but for a drive-by's aim (MODE_AIMWEAPON_FROMCAR)
+                  std::find(std::begin(kMiddle), std::end(kMiddle), mode) != std::end(kMiddle);
+    if (!middle) {
+        float t = std::tan(cam::Fov() * 0.5f * 3.14159265f / 180.0f), aspect = Ref<float>(0xC3EFA4);  // CDraw::ms_fAspectRatio
+        dir += up * (t * (0.5f - cam::CrosshairMultY()) * 2.0f / (aspect > 0.1f ? aspect : 1.6f));
+        dir += front.Cross(up) * (t * (cam::CrosshairMultX() - 0.5f) * 2.0f);
+    }
+    dir = dir.Normalized();
+}
+
+// what the aim points at, as a mark of ours; false: nothing there
 bool Aim(Mark& out) {
     CPlayerPed* me = FindPlayerPed(0);
     if (!me) return false;
-    CVector from = cam::Source(), to = from + cam::Front().Normalized() * kRange;
+    CVector from, dir;
+    AimLine(me, from, dir);
+    CVector to = from + dir * kRange;
+    CEntity* mine = me->InVehicle() && me->Vehicle() ? (CEntity*)me->Vehicle() : (CEntity*)me;
     CEntity*& ignore = Ref<CEntity*>(0xB7CD68);  // CWorld::pIgnoreEntity: not our own player or car
     CEntity* saved = ignore;
-    ignore = me->InVehicle() && me->Vehicle() ? (CEntity*)me->Vehicle() : (CEntity*)me;
+    ignore = mine;
     uint8_t cp[0x2C] = {};  // CColPoint: m_vecPoint first
     CEntity* hit = nullptr;
     bool any = Call<0x56BA00, bool>(&from, &to, (void*)cp, &hit, true, true, true, true, true, true, false, false);  // CWorld::ProcessLineOfSight
     ignore = saved;
-    if (!any) return false;
+    float far = any ? (*(CVector*)cp - from).Length() : kRange;
+    // a person near the line before what it hit (thin to hit): the nearest to the camera
+    CPed* near = nullptr;
+    float nearT = far + 0.5f;
+    CPoolHeader* pool = PedPool();
+    for (int i = 0; pool && i < pool->size; ++i) {
+        if (pool->byteMap[i] < 0) continue;
+        auto* p = (CPed*)(pool->objects + (size_t)i * kPedPoolElemSize);
+        if ((CEntity*)p == (CEntity*)me || p->InVehicle() || p->AreaCode() != me->AreaCode()) continue;
+        CVector c = p->GetPosition() - from;
+        float t = c.Dot(dir);
+        if (t < 1.0f || t > nearT) continue;
+        if ((c - dir * t).Length() < 0.9f + t * 0.01f) near = p, nearT = t;
+    }
+    if (!any && !near) return false;
     out = Mark{};
     out.pos = *(CVector*)cp;
     out.area = me->AreaCode();
-    if (hit && hit->Type() == ENTITY_TYPE_VEHICLE) {
-        out.pos = hit->GetPosition();
-        if (NetVehicle* nv = Vehicles::Instance().Find((CVehicle*)hit)) out.kind = KIND_VEHICLE, out.netId = nv->netId;
-    } else if (hit && hit->Type() == ENTITY_TYPE_PED) {
-        out.pos = hit->GetPosition();
-        if (RemotePlayer* rp = Players::Instance().FindByPed((CPed*)hit)) out.kind = KIND_PLAYER, out.player = rp->id;
-        else if (NetPed* np = Peds::Instance().Find((CPed*)hit)) out.kind = KIND_PED, out.netId = np->netId;
+    CEntity* e = near ? (CEntity*)near : hit;
+    if (e && e->Type() == ENTITY_TYPE_VEHICLE) {
+        out.kind = KIND_VEHICLE, out.handle = GetVehicleRef((CVehicle*)e), out.pos = e->GetPosition();
+    } else if (e && e->Type() == ENTITY_TYPE_PED) {
+        out.pos = e->GetPosition();
+        if (RemotePlayer* rp = Players::Instance().FindByPed((CPed*)e)) out.kind = KIND_PLAYER, out.player = rp->id;
+        else out.kind = KIND_PED, out.handle = GetPedRef((CPed*)e);
     }
     return true;
 }
@@ -179,7 +225,7 @@ void Draw() {
         uint64_t age = now - m.atMs;
         if (age >= kLifeMs || m.area != me->AreaCode()) continue;
         float alpha = age > kLifeMs - kFadeMs ? (float)(kLifeMs - age) / kFadeMs : 1.0f;
-        CVector p = Where(m);
+        CVector p = Where(m, id);
         CRGBA colour = Rgba(ColourOf(id), alpha);
         float x, y, depth;
         bool inView = WorldToScreen(p, x, y, depth) && x > margin && x < w - margin && y > margin && y < h - margin;
@@ -199,7 +245,9 @@ void Draw() {
         }
         Sign(m.kind, x, y, s, colour, alpha);
         float metres = (p - me->GetPosition()).Length();
-        labels.push_back({id, x, y + 20 * s, alpha, Format("%s · %.0f m", NameOf(id).c_str(), metres)});
+        uint32_t c = ColourOf(id);  // the name in its player's colour, the distance in white
+        labels.push_back({id, x, y + 20 * s, alpha,
+                          Format("{%06X}%s{FFFFFF}  %.0f m", c >> 8, NameOf(id).c_str(), metres)});
     }
     g.Begin();
     for (auto& l : labels)
@@ -214,7 +262,7 @@ void DrawOnRadar() {
     for (auto& [id, m] : g_marks) {
         uint64_t age = now - m.atMs;
         if (age >= kLifeMs || m.area != me->AreaCode() || (age < 3000 && (age / 250) % 2)) continue;
-        CVector p = Where(m);
+        CVector p = Where(m, id);
         CVector2D world{p.x, p.y}, radar, screen;
         Call<0x583530>(&radar, &world);   // CRadar::TransformRealWorldPointToRadarSpace
         Call<0x5832F0, float>(&radar);    // CRadar::LimitRadarPoint: onto the radar's edge
@@ -237,7 +285,7 @@ public:
             m.kind = r.U8();
             Vec3 p = r.Vec();
             m.pos = {p.x, p.y, p.z};
-            m.netId = r.U16();
+            r.U16();
             m.player = r.U8();
             m.area = r.I8();
             if (!r.Ok()) return;
@@ -245,11 +293,29 @@ public:
                 g_marks.erase(from);
                 return;
             }
+            if (op == OP_MOVE) {  // a followed car or person moved in its game
+                if (auto it = g_marks.find(from); it != g_marks.end()) it->second.pos = m.pos;
+                return;
+            }
             m.atMs = NowMs();
             g_marks[from] = m;
             CPlayerPed* me = FindPlayerPed(0);
             if (me && me->AreaCode() == m.area) Sound(kSoundMark);
         });
+    }
+    // ours follows its car or person: the others are told where it is
+    void OnPostProcess() override {
+        auto it = g_marks.find(Me());
+        if (it == g_marks.end()) return;
+        Mark& m = it->second;
+        uint64_t now = NowMs();
+        if (now - m.atMs >= kLifeMs) return;
+        CEntity* e = m.kind == KIND_VEHICLE || m.kind == KIND_PED ? Followed(m, Me()) : nullptr;
+        if (!e || now - m.sentMs < kMoveEveryMs) return;
+        m.pos = e->GetPosition();
+        if ((m.pos - m.sentPos).Length() < 0.25f) return;
+        m.sentMs = now, m.sentPos = m.pos;
+        Send(OP_MOVE, m);
     }
     void OnSessionStart() override { g_marks.clear(); }
     void OnSessionEnd() override { g_marks.clear(); }

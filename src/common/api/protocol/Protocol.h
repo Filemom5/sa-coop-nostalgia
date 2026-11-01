@@ -230,8 +230,9 @@ enum MsgId : uint8_t {
     G_OBJ_HOLD = 163,         // reliable: the partner holds the copy of a host's mission object: u8 op (1 hold, 2 release,
                               // 3 enter pressed, 4 deny: host -> partner), u16 object, release: vec3 pos, quat rot
 
-    G_PING = 197,             // reliable: a quick mark (Ping.cpp): u8 op (1 mark, 2 take away), u8 kind (0 place, 1 car, 2
-                              // person, 3 player), vec3 place, u16 net id (car, person), u8 player, i8 interior
+    G_PING = 197,             // a quick mark (Ping.cpp): u8 op (1 mark, 2 take away: reliable; 3 move: the state channel, the
+                              // car or person of the sender's mark is there now), u8 kind (0 place, 1 car, 2 person, 3
+                              // player), vec3 place, u16 (0), u8 player, i8 interior
     G_DOWNED = 198,           // reliable: down instead of dead and revived (Downed.cpp): u8 op (1 down, 2 up, 3 gone, 4 revive
                               // start, 5 revive cancel, 6 revive done), u8 player (255 none), i32 value (down: ms left)
     G_RADIO = 199,            // reliable: the radio of a car shared by the players in it (Radio.cpp): u8 op, u16 car, i8

@@ -1,5 +1,13 @@
 ## Novo nesta versão
 
+- **Marcação na mira:** a marcação agora vai para onde a mira aparece quando você mira com uma arma (e para o meio da tela
+  em primeira pessoa, na luneta e dentro de veículos). Antes ela saía em linha reta da cabeça do CJ.
+- **Marcação fixa em carros e pessoas:** marcando um carro ou uma pessoa (inclusive os da rua), a marcação fica presa
+  neles e acompanha para onde forem, para todos. Pessoas perto da mira também contam, não precisa acertar em cheio.
+- **Nome na cor do jogador:** o nome de quem marcou aparece na cor que ele escolheu no F9 (a mesma do radar).
+
+## Da versão 1.15.0
+
 - **Marcação rápida (Z):** aperte **Z** olhando para um lugar, um carro ou uma pessoa, e todos veem a marcação por 20 s, na
   cor do seu ícone no radar, com o seu nome e a distância. Se estiver fora da tela, ela fica na borda com uma seta. Também
   aparece no radar e no mapa. Carro ou pessoa marcados são seguidos pela marcação. **Z** duas vezes rápido tira a sua.
