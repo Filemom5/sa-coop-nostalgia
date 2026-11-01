@@ -1,0 +1,28 @@
+# Once (when this file changes): the old releases' titles in the new numbering, nostalgia-N -> 1.N.0 (their tags stay).
+# None of them becomes the latest; the current one (nostalgia/versao.txt) is set as the latest again at the end.
+name: renomear versões antigas
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/renomear-versoes.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  renomear:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rename
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(seq 1 14); do
+            id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/nostalgia-$n" --jq .id) || continue
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -f name="SA-COOP Nostalgia 1.$n.0" -f make_latest=false --jq .name
+          done
+          tag=$(tr -d '[:space:]' < nostalgia/versao.txt)
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq .id)
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -f make_latest=true --jq '.tag_name + " is the latest"'
