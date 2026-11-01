@@ -6,7 +6,8 @@
 //
 // So it is set higher once the game set its own: 512 MB when the game may use 4 GB (gta_sa.exe marked large address
 // aware, on a 64-bit Windows) and the computer has the memory, less otherwise. [game] streaming_memory in coop.ini (MB)
-// sets it by hand (0: as here).
+// sets it by hand (0: as here). The Open Limit Adjuster the updater installs sets more (MemoryAvailable = 30% of the
+// computer's memory, at most 1.5 GB): then it is left so.
 #include <windows.h>
 
 #include <algorithm>
@@ -37,10 +38,13 @@ uint32_t WantedMb() {
     return (uint32_t)std::clamp(mb, 50, 1024);
 }
 
-void Apply() {
+void Apply(bool tell = false) {
     uint32_t want = WantedMb() << 20;
     uint32_t& available = Ref<uint32_t>(kMemoryAvailable);
-    if (available >= want) return;
+    if (available >= want) {  // set as high already (the Open Limit Adjuster's MemoryAvailable)
+        if (tell) LOGI("Streaming: memory for the world %u MB (set before us)", available >> 20);
+        return;
+    }
     LOGI("Streaming: memory for the world %u MB (the game set %u MB)", want >> 20, available >> 20);
     available = want;
 }
@@ -56,7 +60,7 @@ class Streaming : public Module {
 public:
     const char* Name() const override { return "Streaming"; }
     void OnInstallHooks() override { mem::HookFn(0x5B8AD0, &HookInit2, &g_origInit2, "CStreaming::Init2"); }
-    void OnGameStarted() override { Apply(); }
+    void OnGameStarted() override { Apply(true); }
     static Streaming& Instance() {
         static Streaming m;
         return m;

@@ -1,5 +1,12 @@
 ## Novo nesta versão
 
+- **Corta-ventos do grupo:** o **Grn Windbreaker** virou o corta-vento lilás **Matunas** (emblema Nostalgia no peito e
+  "Matunas" nas costas), e o **Blk Windbreaker** virou o preto e roxo **Nostalgia** (faixa degradê com grade, punhos e
+  barra listrados). Os dois já aparecem no guarda-roupa de todas as casas, sem precisar comprar, com os nomes
+  "Corta-vento Matunas" e "Corta-vento Nostalgia". Os amigos veem quem estiver usando.
+
+## Da versão 1.15.1
+
 - **Marcação na mira:** a marcação agora vai para onde a mira aparece quando você mira com uma arma (e para o meio da tela
   em primeira pessoa, na luneta e dentro de veículos). Antes ela saía em linha reta da cabeça do CJ.
 - **Marcação fixa em carros e pessoas:** marcando um carro ou uma pessoa (inclusive os da rua), a marcação fica presa

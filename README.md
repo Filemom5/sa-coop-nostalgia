@@ -24,8 +24,11 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
 - **Roda de armas:** a pé, segure **Q**, leve o cursor até a arma e solte para trocar (como no GTA V).
 - **Marcação rápida:** **Z** marca o que a câmera olha (lugar, carro ou pessoa) para todos, por 20 s, na tela, no radar
   e no mapa. **Z** duas vezes tira a marcação. A tecla muda em `coop\coop.ini` (`ping` em `[keys]`).
-- **Mais memória para o mundo:** até 512 MB em vez dos 50 MB do jogo para os modelos e texturas ao redor (`streaming_memory`
-  em `[game]`, em MB; 0 escolhe pelo PC).
+- **Mais memória para o mundo:** o jogo reservava 50 MB para os modelos e texturas ao redor. O Open Limit Adjuster que o
+  atualizador instala já sobe para até 1,5 GB; sem ele, o mod sobe para até 512 MB (`streaming_memory` em `[game]`, em
+  MB; 0 escolhe pelo PC).
+- **Corta-ventos do grupo** (`tools/clothes`): o Grn Windbreaker vira o lilás "Matunas" e o Blk Windbreaker o preto e
+  roxo "Nostalgia", já no guarda-roupa de todas as casas.
 - **Placa NOSTALGIA** no lugar de VINEWOOD, no mesmo estilo da original (`tools/sign`): a placa é refeita a partir dos
   modelos do próprio jogo quando eles carregam.
 - **Cópias mais suaves** para quem não é o host: trem, caixas e objetos de missão e carros dos outros.
