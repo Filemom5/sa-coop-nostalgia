@@ -7,7 +7,7 @@
 // when the slot is empty or out of ammo. In the middle, the weapon pointed at, with its ammo (in the clip / in all).
 // It is drawn with the game's own 2D: its polygons (CSprite2d::Draw2DPolygon), the weapons' HUD icons and its fonts.
 //
-// The mouse moves a cursor of its own, drawn on the ring, as the desktop's does (one count of the mouse a pixel of a
+// The mouse moves a cursor of its own, drawn on the ring, as the desktop's does (one count of the mouse 1.5 pixels of a
 // 1080p screen), held inside the ring: the sector under it (by its angle, out of the middle) is the one picked.
 #include "features/weapon-wheel/WeaponWheel.h"
 
@@ -33,6 +33,9 @@ using namespace game;
 using namespace game::script;
 
 constexpr uintptr_t kMouseNew = 0xB73418;  // CPad::NewMouseControllerState: +0x0C, +0x10 the mouse's move (x, y)
+// CMenuManager's "invert mouse" flags: CPad::UpdateMouse turns the mouse's move round by them (for the camera; out of
+// the menu). The cursor turns it back: as the mouse goes (DirectInput's, y down), as on the desktop.
+constexpr uintptr_t kInvertMouseX = 0xBA6744, kInvertMouseY = 0xBA6745;
 constexpr int kSlots = 13;
 // the sectors clockwise from the top: handguns, SMGs, assault rifles, shotguns, rifles, heavy, the fists (bottom),
 // melee, thrown, detonator, special (spray, extinguisher, camera), gifts, goggles and parachute
@@ -40,7 +43,7 @@ constexpr int kOrder[kSlots] = {2, 4, 5, 3, 6, 7, 0, 1, 8, 12, 9, 10, 11};
 // sizes in pixels of a 1080p screen (scaled by ui::Gfx().Scale())
 constexpr float kInner = 168, kOuter = 300;  // the ring's radii
 constexpr float kCursorDeadZone = 60;        // the cursor this near the middle picks nothing new
-constexpr float kMouseToCursor = 1.0f;       // a mouse's count moves the cursor this much
+constexpr float kMouseToCursor = 1.5f;       // a mouse's count moves the cursor this much
 
 const char* const kNames[47] = {
     "Fist", "Brass Knuckles", "Golf Club", "Nightstick", "Knife", "Baseball Bat", "Shovel", "Pool Cue", "Katana",
@@ -198,6 +201,7 @@ bool KeyDown() {
     g_open = true;
     g_px = g_py = 0;
     g_pick = me->ActiveWeaponSlot();
+    LOGD("Weapon wheel open (mouse inverted x %d, y %d)", *(uint8_t*)kInvertMouseX, *(uint8_t*)kInvertMouseY);
     return true;
 }
 
@@ -206,8 +210,8 @@ void AfterPadUpdate() {
     uint8_t* mouse = (uint8_t*)kMouseNew;
     float& mx = *(float*)(mouse + 0x0C);
     float& my = *(float*)(mouse + 0x10);
-    g_px += mx * kMouseToCursor;
-    g_py += my * kMouseToCursor;
+    g_px += (*(uint8_t*)kInvertMouseX ? -mx : mx) * kMouseToCursor;
+    g_py += (*(uint8_t*)kInvertMouseY ? -my : my) * kMouseToCursor;
     mx = my = 0;  // the camera stays
     float len = std::sqrt(g_px * g_px + g_py * g_py);
     if (len > kOuter) g_px *= kOuter / len, g_py *= kOuter / len, len = kOuter;  // held inside the ring

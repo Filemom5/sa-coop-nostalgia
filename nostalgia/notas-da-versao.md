@@ -1,5 +1,11 @@
 ## Novo nesta versão
 
+- **Cursor da roda de armas corrigido:** o movimento para cima e para baixo estava invertido para quem não usa o mouse
+  invertido no jogo (o jogo inverte o eixo vertical para a câmera, e a roda pegava esse valor). Agora o cursor anda
+  igual ao mouse, e um pouco mais rápido.
+
+## Da versão 12
+
 - **Roda de armas com cursor:** agora aparece um cursor na roda, que anda como o do mouse no Windows. É só colocar em
   cima da arma e soltar o Q.
 - **Fone na posição certa:** o seu ajuste (`/fone 0.003 -0.015 0`) agora é o padrão, e as conchas ficaram mais 5 mm
