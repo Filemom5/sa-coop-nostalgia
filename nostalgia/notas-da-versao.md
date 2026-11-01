@@ -1,5 +1,12 @@
 ## Novo nesta versão
 
+- **Roda de armas (como no GTA V):** a pé, segure **Q**. Aparece uma roda com as suas armas, uma por espaço (punho embaixo,
+  pistolas em cima). Aponte com o mouse e solte o Q para pegar a arma. No meio aparecem o nome e a munição (pente / total).
+  Enquanto a roda está aberta, a câmera para e não dá para atirar. O tempo não fica mais lento, porque no coop o tempo do
+  mundo é o mesmo para todos. A tecla muda em `coop\coop.ini` (`weapon_wheel` em `[keys]`).
+
+## Da versão 10
+
 - **Pegar dinheiro e armas com o veículo:** quem está dirigindo pega o dinheiro e as armas do chão passando por cima,
   com qualquer veículo. Os passageiros não pegam nada (um por veículo).
 - **Fone no espelho e nas fotos:** agora o fone também aparece no reflexo do espelho e nas fotos da câmera.

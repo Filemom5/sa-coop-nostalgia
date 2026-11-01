@@ -16,6 +16,7 @@
 #include "features/downed/Downed.h"
 #include "features/roof/Roof.h"
 #include "features/radio/Headphones.h"
+#include "features/weapon-wheel/WeaponWheel.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
 #include "shared/game/Anim.h"
@@ -104,6 +105,7 @@ void __cdecl HookUpdatePads() {
     roof::AfterPadUpdate();    // holding on to a car's roof: no walking, a jump lets go
     downed::AfterPadUpdate();  // down: no moving; beside a downed friend the enter key revives
     headphones::AfterPadUpdate();  // the headphones' key held: the mouse wheel turns their dial
+    wheel::AfterPadUpdate();       // the weapon wheel open: the mouse points in it, nothing shoots
     if (!Cfg().multiInstance || GetForegroundWindow() == (HWND)game::GameWindow()) return;
     for (int i = 0; i < 2; ++i) game::GetPad(i)->NewState = game::CControllerState{};
 }

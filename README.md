@@ -21,6 +21,7 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
   **X** de novo ou pular solta.
 - **Proteção contra o crash** de personagem sem animação (`0x4D1750`).
 - **Pegar dinheiro e armas com o veículo:** o motorista pega o que passa por cima; os passageiros, não.
+- **Roda de armas:** a pé, segure **Q**, aponte com o mouse e solte para trocar de arma (como no GTA V).
 - **Cópias mais suaves** para quem não é o host: trem, caixas e objetos de missão e carros dos outros.
 - **Registro de rede** no `coop\coop.log` a cada 10 s (ping, perda, FPS, atrasos, teleportes).
 - **Open Limit Adjuster** com 500 pedestres e 500 carros (o jogo tem 140 e 110), contra o crash `0x544BC8` com 4

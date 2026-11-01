@@ -56,6 +56,7 @@ struct ClientConfig {
     int roofKey = 0x58;               // X: hold on to the car one stands on (Roof.cpp)
     int headphonesKey = 0x4A;         // J: the headphones, a station on foot (Headphones.cpp)
     std::string headphonesColour = "preto";  // the headset's colours (Headset.cpp, /fone cor)
+    int weaponWheelKey = 0x51;        // Q: held down, the weapon wheel (WeaponWheel.cpp)
 
     // [debug]
     bool debugOverlay = false;

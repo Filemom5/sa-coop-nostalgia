@@ -83,6 +83,7 @@ bool ClientConfig::Load(const std::wstring& coopDirectory) {
     // H, the first one, is the game's "group: back" on foot, which also stops walking forward while it is held
     if (headphonesKey == 0x48) headphonesKey = 0x4A;
     headphonesColour = ini.Get("game", "headphones_colour", headphonesColour);
+    weaponWheelKey = ini.GetInt("keys", "weapon_wheel", weaponWheelKey);
 
     debugOverlay = ini.GetBool("debug", "overlay", debugOverlay);
     cleanScreen = ini.GetBool("debug", "clean_screen", cleanScreen);

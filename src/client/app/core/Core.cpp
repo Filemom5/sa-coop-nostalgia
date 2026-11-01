@@ -16,6 +16,7 @@
 #include "entities/session/Flow.h"
 #include "features/roof/Roof.h"
 #include "features/radio/Headphones.h"
+#include "features/weapon-wheel/WeaponWheel.h"
 #include "features/story/contest/Contest.h"
 #include "features/story/missions/Missions.h"
 #include "features/teleport/Teleport.h"
@@ -350,6 +351,8 @@ void WriteDefaultConfig(const std::wstring& path) {
         "roof_lock = 88\r\n"
         "; Наушники: нажать - надеть/снять, держать + колесо мыши - станция (74 = J)\r\n"
         "headphones = 74\r\n"
+        "; Колесо оружия: держать (81 = Q)\r\n"
+        "weapon_wheel = 81\r\n"
         "\r\n"
         "[debug]\r\n"
         "; Отладочная информация на экране и подробный лог. Включайте, если вас попросили прислать лог.\r\n"
@@ -466,6 +469,8 @@ bool OnKeyDown(int vk, bool repeat) {
     }
     if (vk == cfg.roofKey && !inMenu && !typingCheat && IsPlayerReady() && roof::Key())
         return true;  // holding on to a car's roof (Roof.cpp)
+    if (vk == cfg.weaponWheelKey && !inMenu && !typingCheat && IsPlayerReady() && wheel::KeyDown())
+        return true;  // the weapon wheel opens (WeaponWheel.cpp): Q's change of weapon does not reach the game
     if (vk == cfg.headphonesKey && !inMenu && !typingCheat && IsPlayerReady())
         headphones::KeyDown();  // the headphones (Headphones.cpp); the key still reaches the game
     if (vk == cfg.passengerKey && !inMenu && IsPlayerReady()) {
