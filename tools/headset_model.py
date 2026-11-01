@@ -20,15 +20,17 @@ RW_VERSION = 0x1803FFFF  # RenderWare 3.6.0.3, as the game's own files
 BODY, CUSHION, RING = 0, 1, 2
 COLOURS = [(28, 28, 32, 255), (18, 18, 20, 255), (255, 95, 176, 255)]  # as made; Headset.cpp sets its own
 
-# sizes in metres (fitted in the game on CJ: the cups over the ears, the band 3 cm above where it first was)
+# sizes in metres (fitted in the game on CJ: the cups over the ears, the band 3 cm above where it first was; then, by
+# hand with /fone, 3 mm up and 1.5 cm back: FIT moves all of it)
+FIT = (0.003, -0.015, 0.0)
 CUP_X = 0.055          # the cups' middle, up the head bone
-CUP_Z = 0.089          # either side (in 6 mm from the first fit: snug on the ears)
+CUP_Z = 0.084          # either side (11 mm in from the first fit: on the ears)
 CUP_A = 0.050          # the oval's half height
 CUP_B = 0.041          # its half width, front to back
-CUSHION_IN, CUSHION_OUT = 0.071, 0.085  # the cushion, out from the head's middle
-SHELL_IN, SHELL_OUT = 0.084, 0.111      # the shell
-BAND_X = 0.085         # the band's arc: its middle up the head bone, its radius
-BAND_R = 0.098
+CUSHION_IN, CUSHION_OUT = 0.066, 0.080  # the cushion, out from the head's middle
+SHELL_IN, SHELL_OUT = 0.079, 0.106      # the shell
+BAND_X = 0.090         # the band's arc: its middle up the head bone, its radius (its top where it was)
+BAND_R = 0.093
 BAND_W = 0.032         # front to back
 BAND_T = 0.011         # thickness
 BAND_END = math.radians(73)  # the arc ends above the cups; the sliders go down from there
@@ -160,13 +162,14 @@ def dff():
     band()
     cup(1)
     cup(-1)
+    verts[:] = [(x + FIT[0], y + FIT[1], z + FIT[2]) for x, y, z in verts]
     nv, nt = len(verts), len(tris)
     assert nv < 65536, nv
     flags = 0x02 | 0x10 | 0x20 | 0x40  # positions, normals, light, modulate material colour
     geo = struct.pack("<Iiii", flags, nt, nv, 1)
     for a, b, c, m in tris:
         geo += struct.pack("<HHHH", b, a, m, c)  # vertex2, vertex1, material, vertex3
-    geo += struct.pack("<ffff", CUP_X + 0.03, 0.0, 0.0, 0.2)  # bounding sphere
+    geo += struct.pack("<ffff", CUP_X + 0.03 + FIT[0], FIT[1], FIT[2], 0.2)  # bounding sphere
     geo += struct.pack("<II", 1, 1)
     for v in verts:
         geo += struct.pack("<fff", *v)

@@ -1,5 +1,13 @@
 ## Novo nesta versão
 
+- **Roda de armas com cursor:** agora aparece um cursor na roda, que anda como o do mouse no Windows. É só colocar em
+  cima da arma e soltar o Q.
+- **Fone na posição certa:** o seu ajuste (`/fone 0.003 -0.015 0`) agora é o padrão, e as conchas ficaram mais 5 mm
+  para dentro.
+- **Pegar com o veículo só passando por cima:** a área caiu de 2,5 m para 0,5 m em volta do veículo.
+
+## Da versão 11
+
 - **Roda de armas (como no GTA V):** a pé, segure **Q**. Aparece uma roda com as suas armas, uma por espaço (punho embaixo,
   pistolas em cima). Aponte com o mouse e solte o Q para pegar a arma. No meio aparecem o nome e a munição (pente / total).
   Enquanto a roda está aberta, a câmera para e não dá para atirar. O tempo não fica mais lento, porque no coop o tempo do

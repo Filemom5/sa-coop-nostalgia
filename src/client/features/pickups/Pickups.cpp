@@ -88,7 +88,7 @@ void SendEvent(uint8_t what, uintptr_t p, uint8_t type) {
 }
 
 // ---------------------------------------------------------------- this game's player takes a pickup
-constexpr float kVehicleReach = 2.5f;  // around the vehicle's shape: each pickup is looked at every 6th frame only
+constexpr float kVehicleReach = 0.5f;  // around the vehicle's shape: it has to go over the pickup
 
 // money, or a weapon (not health, armour, a bribe or a mission's own item): what a driver takes by going over it
 bool TakenByVehicle(uint8_t type, int model) {

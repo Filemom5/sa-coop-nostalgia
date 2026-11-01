@@ -6,6 +6,9 @@
 // SA keeps one weapon per slot, so the ring has a sector per slot (the fists at the bottom, the handguns at the top), dim
 // when the slot is empty or out of ammo. In the middle, the weapon pointed at, with its ammo (in the clip / in all).
 // It is drawn with the game's own 2D: its polygons (CSprite2d::Draw2DPolygon), the weapons' HUD icons and its fonts.
+//
+// The mouse moves a cursor of its own, drawn on the ring, as the desktop's does (one count of the mouse a pixel of a
+// 1080p screen), held inside the ring: the sector under it (by its angle, out of the middle) is the one picked.
 #include "features/weapon-wheel/WeaponWheel.h"
 
 #include <windows.h>
@@ -34,8 +37,10 @@ constexpr int kSlots = 13;
 // the sectors clockwise from the top: handguns, SMGs, assault rifles, shotguns, rifles, heavy, the fists (bottom),
 // melee, thrown, detonator, special (spray, extinguisher, camera), gifts, goggles and parachute
 constexpr int kOrder[kSlots] = {2, 4, 5, 3, 6, 7, 0, 1, 8, 12, 9, 10, 11};
-constexpr float kPointerDeadZone = 0.35f;  // the pointer this near the middle picks nothing new
-constexpr float kMouseToPointer = 0.012f;  // a mouse's count moves the pointer this much of the ring's radius
+// sizes in pixels of a 1080p screen (scaled by ui::Gfx().Scale())
+constexpr float kInner = 168, kOuter = 300;  // the ring's radii
+constexpr float kCursorDeadZone = 60;        // the cursor this near the middle picks nothing new
+constexpr float kMouseToCursor = 1.0f;       // a mouse's count moves the cursor this much
 
 const char* const kNames[47] = {
     "Fist", "Brass Knuckles", "Golf Club", "Nightstick", "Knife", "Baseball Bat", "Shovel", "Pool Cue", "Katana",
@@ -46,7 +51,7 @@ const char* const kNames[47] = {
     "Camera", "Night Vision", "Thermal Goggles", "Parachute"};
 
 bool g_open = false;
-float g_px = 0, g_py = 0;  // the pointer, the ring's radius being 1
+float g_px = 0, g_py = 0;  // the cursor, from the middle (1080p pixels)
 int g_pick = -1;           // the slot pointed at
 
 struct CRGBA {
@@ -122,7 +127,7 @@ void Draw() {
     if (!me) return;
     auto& g = ui::Gfx();
     float s = g.Scale(), cx = g.Width() / 2, cy = g.Height() / 2;
-    float r0 = 168 * s, r1 = 300 * s, mid = (r0 + r1) / 2;
+    float r0 = kInner * s, r1 = kOuter * s, mid = (r0 + r1) / 2;
     const float pi = 3.14159265f, step = 2 * pi / kSlots, gap = 0.012f;
     g.End();  // the game draws with its own state
     for (int k = 0; k < kSlots; ++k) {
@@ -140,6 +145,10 @@ void Draw() {
             Icon(weapon, cx + mid * std::cos(a), cy + mid * std::sin(a), 74 * s, tint);
         }
     }
+    // the cursor: a white dot in a dark ring
+    float px = cx + g_px * s, py = cy + g_py * s;
+    Arc(px, py, 0, 13 * s, 0, 2 * pi, CRGBA{18, 18, 22, 220});
+    Arc(px, py, 0, 8 * s, 0, 2 * pi, CRGBA{255, 255, 255, 255});
     g.Begin();
     // the weapon pointed at, and its ammo
     int weapon = g_pick >= 0 ? WeaponIn(me, g_pick) : -1;
@@ -197,12 +206,12 @@ void AfterPadUpdate() {
     uint8_t* mouse = (uint8_t*)kMouseNew;
     float& mx = *(float*)(mouse + 0x0C);
     float& my = *(float*)(mouse + 0x10);
-    g_px += mx * kMouseToPointer;
-    g_py += my * kMouseToPointer;
+    g_px += mx * kMouseToCursor;
+    g_py += my * kMouseToCursor;
     mx = my = 0;  // the camera stays
     float len = std::sqrt(g_px * g_px + g_py * g_py);
-    if (len > 1) g_px /= len, g_py /= len, len = 1;
-    if (len >= kPointerDeadZone) {
+    if (len > kOuter) g_px *= kOuter / len, g_py *= kOuter / len, len = kOuter;  // held inside the ring
+    if (len >= kCursorDeadZone) {
         const float pi = 3.14159265f, step = 2 * pi / kSlots;
         float a = std::atan2(g_py, g_px) + pi / 2 + step / 2;  // from the top sector's start, clockwise
         a = std::fmod(a + 4 * pi, 2 * pi);
