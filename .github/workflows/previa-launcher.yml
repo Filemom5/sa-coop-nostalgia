@@ -37,6 +37,11 @@ jobs:
           if (Test-Path $lnk) { $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk); $s.TargetPath; $s.Arguments; $s.IconLocation; $s.WindowStyle } else { 'no shortcut' }
           '--- pictures'
           Get-ChildItem $previa | ForEach-Object { $_.Name + ' ' + $_.Length }
+          # the pictures also go in the log, in base64 pieces, for whoever cannot download the artifact
+          foreach ($f in Get-ChildItem $previa -Filter *.png) {
+            $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($f.FullName))
+            for ($i = 0; $i -lt $b64.Length; $i += 16000) { 'PNG ' + $f.Name + ' ' + $b64.Substring($i, [Math]::Min(16000, $b64.Length - $i)) }
+          }
 
       - uses: actions/upload-artifact@v4
         with:
