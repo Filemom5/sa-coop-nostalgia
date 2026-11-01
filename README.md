@@ -22,6 +22,10 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
 - **Proteção contra o crash** de personagem sem animação (`0x4D1750`).
 - **Pegar dinheiro e armas com o veículo:** o motorista pega o que o veículo passa por cima; os passageiros, não.
 - **Roda de armas:** a pé, segure **Q**, leve o cursor até a arma e solte para trocar (como no GTA V).
+- **Marcação rápida:** **Z** marca o que a câmera olha (lugar, carro ou pessoa) para todos, por 20 s, na tela, no radar
+  e no mapa. **Z** duas vezes tira a marcação. A tecla muda em `coop\coop.ini` (`ping` em `[keys]`).
+- **Mais memória para o mundo:** até 512 MB em vez dos 50 MB do jogo para os modelos e texturas ao redor (`streaming_memory`
+  em `[game]`, em MB; 0 escolhe pelo PC).
 - **Placa NOSTALGIA** no lugar de VINEWOOD, no mesmo estilo da original (`tools/sign`): a placa é refeita a partir dos
   modelos do próprio jogo quando eles carregam.
 - **Cópias mais suaves** para quem não é o host: trem, caixas e objetos de missão e carros dos outros.

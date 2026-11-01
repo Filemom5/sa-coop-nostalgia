@@ -2142,7 +2142,15 @@ void Players::OnRender() {
     for (auto& [id, rp] : m_remote) DrawNameTag(rp);
 }
 
-void Players::DrawRadarArrows() { DrawArrows(); }
+void Players::DrawRadarArrows() {
+    DrawArrows();
+    if (s_onRadarBlips) s_onRadarBlips();
+}
+
+uint32_t Players::MarkRgba(const std::string& colour) {
+    int64_t c = BlipColour(colour);
+    return c > 8 ? (uint32_t)c : Call<0x584770, uint32_t>((int)(c < 0 ? 7 : c), true, true);  // CRadar::GetRadarTraceColour
+}
 void Players::SetRadarArrowsHooked(bool hooked) { g_arrowHook = hooked; }
 
 void Players::SetMarkColour(const std::string& colour) {

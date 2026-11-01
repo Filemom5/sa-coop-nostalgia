@@ -84,6 +84,8 @@ bool ClientConfig::Load(const std::wstring& coopDirectory) {
     if (headphonesKey == 0x48) headphonesKey = 0x4A;
     headphonesColour = ini.Get("game", "headphones_colour", headphonesColour);
     weaponWheelKey = ini.GetInt("keys", "weapon_wheel", weaponWheelKey);
+    pingKey = ini.GetInt("keys", "ping", pingKey);
+    streamingMemoryMb = ini.GetInt("game", "streaming_memory", streamingMemoryMb);
 
     debugOverlay = ini.GetBool("debug", "overlay", debugOverlay);
     cleanScreen = ini.GetBool("debug", "clean_screen", cleanScreen);

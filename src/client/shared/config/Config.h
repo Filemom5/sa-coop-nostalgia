@@ -57,6 +57,8 @@ struct ClientConfig {
     int headphonesKey = 0x4A;         // J: the headphones, a station on foot (Headphones.cpp)
     std::string headphonesColour = "preto";  // the headset's colours (Headset.cpp, /fone cor)
     int weaponWheelKey = 0x51;        // Q: held down, the weapon wheel (WeaponWheel.cpp)
+    int pingKey = 0x5A;               // Z: mark what the camera looks at for the others (Ping.cpp)
+    int streamingMemoryMb = 0;        // [game] streaming_memory: the world's memory (Streaming.cpp), 0 = by the PC
 
     // [debug]
     bool debugOverlay = false;

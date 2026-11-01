@@ -70,6 +70,10 @@ public:
     const char* Name() const override { return "Players"; }
     // a turn of the car radio's dial by this player (+1 or -1); set by the shared radio (features/radio)
     static inline void (*s_onStationKey)(int delta) = nullptr;
+    // more to draw on the radar and the map after the players' arrows (features/ping)
+    static inline void (*s_onRadarBlips)() = nullptr;
+    // the RGBA of a mark colour (SetMarkColour's names; empty: the allies' blue)
+    static uint32_t MarkRgba(const std::string& colour);
     void OnInstallHooks() override;
     void OnSessionStart() override;
     void OnSessionEnd() override;

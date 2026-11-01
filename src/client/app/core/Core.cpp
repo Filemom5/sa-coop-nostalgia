@@ -16,6 +16,7 @@
 #include "entities/session/Flow.h"
 #include "features/roof/Roof.h"
 #include "features/radio/Headphones.h"
+#include "features/ping/Ping.h"
 #include "features/weapon-wheel/WeaponWheel.h"
 #include "features/story/contest/Contest.h"
 #include "features/story/missions/Missions.h"
@@ -353,6 +354,8 @@ void WriteDefaultConfig(const std::wstring& path) {
         "headphones = 74\r\n"
         "; Колесо оружия: держать (81 = Q)\r\n"
         "weapon_wheel = 81\r\n"
+        "; Метка для напарников: на что смотрит камера (90 = Z)\r\n"
+        "ping = 90\r\n"
         "\r\n"
         "[debug]\r\n"
         "; Отладочная информация на экране и подробный лог. Включайте, если вас попросили прислать лог.\r\n"
@@ -405,7 +408,9 @@ const char* const kCheatsWithT[] = {
     "PROFESSIONALSKIT", "ROCKETMAN", "ROCKETMAYHEM", "SCOTTISHSUMMER", "SLOWITDOWN", "SOLONGASITSBLACK", "SPEEDITUP",
     "STATEOFEMERGENCY", "STAYINANDWATCHTV", "STICKLIKEGLUE", "STINGLIKEABEE", "STOPPICKINGONME", "SURROUNDEDBYNUTTERS",
     "TIMEJUSTFLIESBY", "TIMETOKICKASS", "TOODAMNHOT", "TURNDOWNTHEHEAT", "TURNUPTHEHEAT", "VPJTQWV", "WANRLTW",
-    "WHERESTHEFUNERAL", "WHOATEALLTHEPIES", "YLTEICZ"};
+    "WHERESTHEFUNERAL", "WHOATEALLTHEPIES", "YLTEICZ",
+    // and with Z (the quick mark's key)
+    "AEZAKMI", "AIYPWZQP", "KJKSZPJ", "UZUMYMW", "ZEIIVG"};
 uint64_t g_lastLetterMs = 0;
 
 // The key goes on a code being typed: the game's last keys (CCheat::m_CheatString, newest first) and this one begin one
@@ -471,6 +476,7 @@ bool OnKeyDown(int vk, bool repeat) {
         return true;  // holding on to a car's roof (Roof.cpp)
     if (vk == cfg.weaponWheelKey && !inMenu && !typingCheat && IsPlayerReady() && wheel::KeyDown())
         return true;  // the weapon wheel opens (WeaponWheel.cpp): Q's change of weapon does not reach the game
+    if (vk == cfg.pingKey && !inMenu && !typingCheat && IsPlayerReady()) ping::KeyDown();  // the key still reaches the game
     if (vk == cfg.headphonesKey && !inMenu && !typingCheat && IsPlayerReady())
         headphones::KeyDown();  // the headphones (Headphones.cpp); the key still reaches the game
     if (vk == cfg.passengerKey && !inMenu && IsPlayerReady()) {

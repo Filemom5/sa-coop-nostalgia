@@ -1,16 +1,27 @@
 ## Novo nesta versão
 
+- **Marcação rápida (Z):** aperte **Z** olhando para um lugar, um carro ou uma pessoa, e todos veem a marcação por 20 s, na
+  cor do seu ícone no radar, com o seu nome e a distância. Se estiver fora da tela, ela fica na borda com uma seta. Também
+  aparece no radar e no mapa. Carro ou pessoa marcados são seguidos pela marcação. **Z** duas vezes rápido tira a sua.
+  A tecla muda em `coop\coop.ini` (`ping` em `[keys]`).
+- **Mais memória para o mundo:** o jogo reservava só 50 MB para os prédios, carros e pessoas ao redor (um valor de
+  2004). Agora reserva até 512 MB, conforme o PC, então o mundo some e aparece atrasado bem menos. Dá para mudar em `coop\coop.ini`
+  (`streaming_memory` em `[game]`, em MB).
+- **Versões com número novo:** a partir de agora as versões são como 1.15.0 (esta é a 15ª).
+
+## Da versão 1.14.0
+
 - **Placa NOSTALGIA:** a placa VINEWOOD do morro agora diz NOSTALGIA. N, O e I são as letras originais. S, T, A, L e G
   foram desenhadas no mesmo tipo de letra, com as mesmas texturas, estruturas e luz de dia e de noite. De longe também
   aparece NOSTALGIA, e dá para subir e andar nas letras como antes.
 
-## Da versão 13
+## Da versão 1.13.0
 
 - **Cursor da roda de armas corrigido:** o movimento para cima e para baixo estava invertido para quem não usa o mouse
   invertido no jogo (o jogo inverte o eixo vertical para a câmera, e a roda pegava esse valor). Agora o cursor anda
   igual ao mouse, e um pouco mais rápido.
 
-## Da versão 12
+## Da versão 1.12.0
 
 - **Roda de armas com cursor:** agora aparece um cursor na roda, que anda como o do mouse no Windows. É só colocar em
   cima da arma e soltar o Q.
@@ -18,21 +29,21 @@
   para dentro.
 - **Pegar com o veículo só passando por cima:** a área caiu de 2,5 m para 0,5 m em volta do veículo.
 
-## Da versão 11
+## Da versão 1.11.0
 
 - **Roda de armas (como no GTA V):** a pé, segure **Q**. Aparece uma roda com as suas armas, uma por espaço (punho embaixo,
   pistolas em cima). Aponte com o mouse e solte o Q para pegar a arma. No meio aparecem o nome e a munição (pente / total).
   Enquanto a roda está aberta, a câmera para e não dá para atirar. O tempo não fica mais lento, porque no coop o tempo do
   mundo é o mesmo para todos. A tecla muda em `coop\coop.ini` (`weapon_wheel` em `[keys]`).
 
-## Da versão 10
+## Da versão 1.10.0
 
 - **Pegar dinheiro e armas com o veículo:** quem está dirigindo pega o dinheiro e as armas do chão passando por cima,
   com qualquer veículo. Os passageiros não pegam nada (um por veículo).
 - **Fone no espelho e nas fotos:** agora o fone também aparece no reflexo do espelho e nas fotos da câmera.
 - **Conchas do fone mais fechadas:** 6 mm mais para dentro, encostadas nas orelhas.
 
-## Da versão 9
+## Da versão 1.9.0
 
 - **Fone agora no J** (era H). No GTA, o H a pé é o comando "grupo: recuar" e travava o W enquanto estava apertado.
   Toque **J** para pôr e tirar; segurando **J**, a rodinha troca a estação.
@@ -41,11 +52,11 @@
 - **Fone novo, mais detalhado:** conchas ovais com almofada, arco acolchoado mais alto (não entra mais na cabeça).
 - **Cores do fone:** `/fone cor preto`, `branco`, `rosa`, `azul`, `vermelho` ou `cinza`. Os outros veem a sua cor.
 
-## Da versão 8
+## Da versão 1.8.0
 
 - Crash ao pôr o fone corrigido.
 
-## Da versão 7
+## Da versão 1.7.0
 
 - Rádio do fone sem pular, fone visível com o SilentPatch, nomes grandes no MP3 e atalho com o ícone do GTA.
 

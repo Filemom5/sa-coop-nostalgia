@@ -56,9 +56,10 @@ public:
             s.longestGapMs = 0;
         }
         float fps = (float)m_frames * 1000.0f / (float)(now - m_startMs);
-        LOGI("Net: ping %u ms, loss %.1f%%, fps %.0f (longest frame %llu ms), longest wait for a state: %s; car copies jumped %u times",
+        LOGI("Net: ping %u ms, loss %.1f%%, fps %.0f (longest frame %llu ms), longest wait for a state: %s; car copies jumped %u times; "
+             "world memory %u of %u MB",
              Net().Rtt(), Net().Net().LossPercent(), fps, (unsigned long long)m_longestFrameMs, gaps.empty() ? "-" : gaps.c_str(),
-             Vehicles::s_mirrorJumps - m_jumpsAtStart);
+             Vehicles::s_mirrorJumps - m_jumpsAtStart, game::Ref<uint32_t>(0x8E4CB4) >> 20, game::Ref<uint32_t>(0x8A5A80) >> 20);
         m_startMs = now;
         m_frames = 0;
         m_longestFrameMs = 0;
