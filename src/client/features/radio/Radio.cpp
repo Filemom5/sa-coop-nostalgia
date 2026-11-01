@@ -410,7 +410,10 @@ public:
 };
 
 struct Reg {
-    Reg() { core::RegisterModule(&Radio::Instance()); }
+    Reg() {
+        core::RegisterModule(&Radio::Instance());
+        Players::s_onStationKey = &StationKey;
+    }
 } g_reg;
 }  // namespace
 

@@ -1,12 +1,12 @@
-# Builds SA:COOP on every push and pull request and keeps the archive as an artifact.
-# A tag like v0.2.0 also publishes the archive as a GitHub release, with the text of .github/release-notes.md.
+# SA-COOP Nostalgia: builds on every push to main (to catch a broken build), and a tag like nostalgia-2 also publishes a
+# GitHub release with the files the updater (nostalgia/coop/atualizador.ps1) downloads, and the installer zip for new
+# players. The release text is nostalgia/notas-da-versao.md.
 name: build
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
-  pull_request:
+    tags: ["nostalgia-*"]
   workflow_dispatch:
 
 permissions:
@@ -40,18 +40,35 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8  # it prints the Russian texts it finds
 
-      - name: Build the archive
+      - name: Build
         run: python tools/build.py dist
+
+      - name: Files for the updater and the installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item dist/SA-COOP/coop.asi release/
+          Copy-Item dist/SA-COOP/coop/coop.pdb release/
+          Copy-Item dist/SA-COOP/coop/coop-server.exe release/
+          Copy-Item nostalgia/coop/atualizador.ps1 release/
+          Compress-Archive -Path "nostalgia/Jogar SA-COOP.bat", "nostalgia/coop" -DestinationPath release/SA-COOP-Nostalgia-instalador.zip
+          Get-ChildItem release
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SA-COOP
-          path: dist/SA-COOP.zip
+          name: SA-COOP-Nostalgia
+          path: release/*
 
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/nostalgia-')
         uses: softprops/action-gh-release@v2
         with:
-          name: SA:COOP ${{ github.ref_name }}
-          files: dist/SA-COOP.zip
-          body_path: .github/release-notes.md
+          name: SA-COOP Nostalgia ${{ github.ref_name }}
+          body_path: nostalgia/notas-da-versao.md
+          make_latest: true
+          files: |
+            release/coop.asi
+            release/coop.pdb
+            release/coop-server.exe
+            release/atualizador.ps1
+            release/SA-COOP-Nostalgia-instalador.zip

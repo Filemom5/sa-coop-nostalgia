@@ -14,7 +14,6 @@
 #include "entities/ped/Peds.h"
 #include "entities/session/Flow.h"
 #include "entities/vehicle/Vehicles.h"
-#include "features/radio/Radio.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
 #include "shared/game/Anim.h"
@@ -230,12 +229,12 @@ StationFn g_origNextStation = nullptr, g_origLastStation = nullptr;
 // A turn of the dial is also told to the other players in the car (Radio.cpp).
 bool __fastcall HookNextStation(CPad* pad, void* edx) {
     bool turned = !PassengerAiming() && g_origNextStation(pad, edx);
-    if (turned) radio::StationKey(1);
+    if (turned && Players::s_onStationKey) Players::s_onStationKey(1);
     return turned;
 }
 bool __fastcall HookLastStation(CPad* pad, void* edx) {
     bool turned = !PassengerAiming() && g_origLastStation(pad, edx);
-    if (turned) radio::StationKey(-1);
+    if (turned && Players::s_onStationKey) Players::s_onStationKey(-1);
     return turned;
 }
 

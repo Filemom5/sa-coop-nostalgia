@@ -68,6 +68,8 @@ struct RemotePlayer {
 class Players : public Module {
 public:
     const char* Name() const override { return "Players"; }
+    // a turn of the car radio's dial by this player (+1 or -1); set by the shared radio (features/radio)
+    static inline void (*s_onStationKey)(int delta) = nullptr;
     void OnInstallHooks() override;
     void OnSessionStart() override;
     void OnSessionEnd() override;
