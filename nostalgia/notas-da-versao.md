@@ -1,10 +1,15 @@
 ## Novo nesta versão
 
-- **Rádio igual para todo mundo:** quem estiver na mesma estação ouve a mesma música, mesmo em carros diferentes. Cada
-  carro continua escolhendo a própria estação; a música segue quem está ouvindo aquela estação há mais tempo.
-- **Fone de ouvido:** a pé, toque **H** para ouvir rádio no fone (de novo para tirar). Segurando **H**, a rodinha do mouse
-  troca a estação em vez da arma. Ao entrar num carro, toca o rádio do carro; ao sair, o fone volta.
-- **MP3 na tela:** ao ligar o fone ou trocar de estação, aparece um MP3 no canto direito com o nome da estação.
+- **Fone na cabeça:** ao tocar **H**, o personagem leva as mãos à cabeça e o fone aparece (some ao tirar ou ao entrar
+  num carro). Os outros jogadores também veem o fone em você.
+- **Ajuste do fone (teste):** se o fone aparecer torto ou fora do lugar, use no chat `/fone x y z rx ry rz` para mover
+  (metros) e girar (graus). `/fone` sozinho mostra os valores atuais.
+
+## Da versão anterior
+
+- **Rádio igual para todo mundo** na mesma estação, mesmo em carros diferentes.
+- **Fone de ouvido:** **H** liga e desliga; segurando **H**, a rodinha troca a estação.
+- **MP3 na tela** com o nome da estação.
 
 ## Das versões anteriores
 

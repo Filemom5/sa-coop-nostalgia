@@ -1,10 +1,17 @@
 #pragma once
+#include <cstdint>
 
 namespace coop::headphones {
 
 // The headphones (Headphones.cpp): a station of the radio heard on foot.
 // They play now: on, our player out of any vehicle with a radio, and the radio started for them.
 bool Playing();
+// The player put them on (the key), wherever he is now.
+bool On();
+// They are on our player's head now: on, out of any vehicle with a radio (Headset.cpp draws them).
+bool Worn();
+// Another player has them on, or took them off (G_RADIO OP_HEADSET, Radio.cpp): his copy wears them here (Headset.cpp).
+void RemoteHeadset(uint8_t id, bool on);
 // The headphones' key went down (keys/headphones in coop.ini, H): a tap puts them on or takes them off, held down the
 // mouse wheel turns their dial. The key still reaches the game (in a car it is the horn).
 void KeyDown();

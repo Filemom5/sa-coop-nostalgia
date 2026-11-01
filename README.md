@@ -12,6 +12,8 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
   estação há mais tempo).
 - **Fone de ouvido:** a pé, **H** liga e desliga o rádio no fone; segurando **H**, a rodinha troca a estação. Um MP3 no
   canto direito mostra a estação. A tecla muda em `coop\coop.ini` (`headphones` em `[keys]`).
+- **Fone na cabeça:** um modelo próprio de fone (`tools/headset_model.py`), desenhado no osso da cabeça de quem está de
+  fone, também nas cópias dos outros jogadores. `/fone x y z rx ry rz` ajusta a posição num teste.
 - **Caído em vez de morto** (estilo Left 4 Dead): quem "morre" a pé cai ferido por 25 s. Um amigo segura **F** por
   4 s ao lado para levantá-lo. Sem ajuda, ou todos caídos, morre e vai para o hospital como sempre.
 - **Segurar no teto do carro:** em cima de um carro, **X** prende o personagem no lugar enquanto o carro anda.

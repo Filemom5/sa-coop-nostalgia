@@ -191,6 +191,8 @@ struct Reg {
 }  // namespace
 
 bool Playing() { return g_on && g_playing && !VehicleRadio() && RadioOn(); }
+bool On() { return g_on; }
+bool Worn() { return g_on && !VehicleRadio() && core::IsPlayerReady(); }
 
 void KeyDown() {
     if (VehicleRadio()) return;  // in a car the key is the horn

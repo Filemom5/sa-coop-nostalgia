@@ -23,6 +23,8 @@
 //    someone getting in, on each new track and every 3 s while players share the car.
 //  * OP_STATION: the station of a radio of its own (car: the sender's, or 0), u32 ms it has listened to it, then its song
 //    as in OP_SYNC. Sent on a new track, a change of station and every 3 s; station 13 (off) when it stops telling.
+//  * OP_HEADSET: the sender wears the headphones (station 1) or not (0): his copy wears them too (Headset.cpp). Sent on
+//    a change and every 5 s while he wears them.
 #include "features/radio/Radio.h"
 
 #include <algorithm>
@@ -47,7 +49,7 @@ namespace coop::radio {
 namespace {
 using namespace game;
 
-enum : uint8_t { OP_TUNE = 1, OP_SYNC = 2, OP_STATION = 3 };
+enum : uint8_t { OP_TUNE = 1, OP_SYNC = 2, OP_STATION = 3, OP_HEADSET = 4 };
 
 // CAERadioTrackManager AERadioTrackManager (0x8CB6F8) and its fields
 constexpr uintptr_t kRadio = 0x8CB6F8;
@@ -444,7 +446,12 @@ void Handle(uint8_t from, Reader& r) {
             song.length = r.I32();
         }
     }
-    if (!r.Ok() || from == Net().MyId() || station <= kRadioEmergency || station > kRadioOff) return;
+    if (!r.Ok() || from == Net().MyId()) return;
+    if (op == OP_HEADSET) {
+        headphones::RemoteHeadset(from, station != 0);
+        return;
+    }
+    if (station <= kRadioEmergency || station > kRadioOff) return;
     uint64_t now = NowMs();
     if (op == OP_STATION) {
         if (hasSong && station < kRadioUserTracks && song.queue[0] >= 0 && song.pos >= 0)
@@ -570,6 +577,15 @@ struct Reg {
     }
 } g_reg;
 }  // namespace
+
+void SendHeadset(bool on) {
+    if (!Net().Online()) return;
+    Writer w(proto::G_RADIO);
+    w.U8(OP_HEADSET);
+    w.U16(0);
+    w.I8(on ? 1 : 0);
+    Net().Send(proto::CH_RELIABLE, w);
+}
 
 void StationKey(int delta) {
     if (!Net().Online() || !g_car) return;
