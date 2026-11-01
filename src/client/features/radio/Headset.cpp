@@ -120,9 +120,9 @@ void DrawOn(CPed* ped) {
     for (int i = 0; i < 3; ++i)
         if (turns[i] != 0) Call<0x7F1FD0, void*>(matrix, &kAxes[i], turns[i], kCombinePreConcat);  // RwMatrixRotate
     Call<0x7F0910, void*>(frame);    // RwFrameUpdateObjects
-    CallMethod<0x553F00, bool>(ped);  // CPed::SetupLighting
-    Call<0x749B20, void*>(Model());  // RpClumpRender
-    CallMethod<0x5533B0>(ped);        // CPed::RemoveLighting
+    bool lit = CallMethod<0x553F00, bool>(ped);  // CPed::SetupLighting
+    Call<0x749B20, void*>(Model());             // RpClumpRender
+    CallMethod<0x5533B0>(ped, (uint8_t)lit);    // CPed::RemoveLighting(bool): it takes what SetupLighting gave (ret 4)
 }
 
 void __cdecl HookRenderWeaponPeds() {

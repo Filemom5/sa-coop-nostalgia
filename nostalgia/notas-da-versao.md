@@ -1,11 +1,11 @@
 ## Novo nesta versão
 
-- **Rádio do fone corrigida:** o jogo desligava o rádio fora do carro a cada instante, e por isso as músicas pulavam
-  sozinhas. Agora a estação toca normalmente com o fone.
-- **Fone na cabeça corrigido:** o SilentPatch tomava o lugar onde o fone era desenhado; agora ele aparece mesmo com o
-  SilentPatch. `/fone x y z rx ry rz` continua servindo para ajustar a posição.
-- **Nomes grandes no MP3:** o nome da estação diminui ou quebra em duas linhas para caber na tela.
-- **Atalho com o ícone do GTA:** o atalho da área de trabalho usa o ícone do próprio jogo; só o nome muda.
+- **Crash ao pôr o fone corrigido:** o jogo fechava no instante em que o fone aparecia na cabeça.
+- Para ajustar a posição do fone: `/fone x y z rx ry rz` no chat (`/fone` sozinho mostra os valores).
+
+## Da versão 7
+
+- Rádio do fone sem pular, fone visível com o SilentPatch, nomes grandes no MP3 e atalho com o ícone do GTA.
 
 ## Das versões 5 e 6
 
