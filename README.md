@@ -16,15 +16,19 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
 - **Cópias mais suaves** para quem não é o host: trem, caixas e objetos de missão e carros dos outros.
 - **Registro de rede** no `coop\coop.log` a cada 10 s (ping, perda, FPS, atrasos, teleportes).
 - **Open Limit Adjuster** com 500 pedestres e 500 carros (o jogo tem 140 e 110), contra o crash `0x544BC8` com 4
-  jogadores. O atualizador só instala se você ainda não tiver um limit adjuster (na pasta do jogo ou em `scripts`).
+  jogadores. O atualizador só instala se você ainda não tiver um limit adjuster (na pasta do jogo ou em `scripts`); se
+  já tiver o Open Limit Adjuster, ele sobe no `.ini` os limites que estiverem abaixo disso.
+- **Launcher** com a logo do grupo (atalho **SA-COOP Nostalgia** na área de trabalho): atualiza sozinho, mostra as
+  novidades da versão e abre o jogo no botão JOGAR.
 
 ## Instalação (primeira vez)
 
 1. Tenha o GTA San Andreas 1.0 US com o **SA:COOP 0.3.2** oficial instalado
    ([releases do SA:COOP](https://github.com/Karimov-Akbar/sa-coop/releases)).
 2. Baixe o `SA-COOP-Nostalgia-instalador.zip` da [última versão](https://github.com/Filemom5/sa-coop-nostalgia/releases/latest) e extraia **dentro da pasta
-   do GTA** (onde fica o `gta_sa.exe`). Ele traz o `Jogar SA-COOP.bat` e o `coop\atualizador.ps1`.
-3. Abra o jogo sempre pelo **`Jogar SA-COOP.bat`**. Ele baixa a versão mais nova (se houver) e abre o GTA.
+   do GTA** (onde fica o `gta_sa.exe`). Ele traz o `Jogar SA-COOP.bat` e a pasta `coop` com o atualizador e o launcher.
+3. Abra uma vez pelo **`Jogar SA-COOP.bat`**: ele instala a versão mais nova, cria o atalho **SA-COOP Nostalgia** na
+   área de trabalho e abre o GTA. Depois, abra sempre pelo atalho (o `.bat` continua funcionando).
 
 Os arquivos substituídos ficam guardados como `.original` (por exemplo `coop.asi.original`). Para voltar ao SA:COOP
 oficial, é só renomeá-los de volta.

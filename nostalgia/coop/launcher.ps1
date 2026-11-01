@@ -23,6 +23,27 @@ $xaml = @'
         WindowStartupLocation="CenterScreen" Background="#170C36" BorderBrush="#7A3FC4" BorderThickness="1"
         FontFamily="Segoe UI" Foreground="White">
   <Window.Resources>
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="6"/>
+      <Setter Property="MinWidth" Value="6"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Track x:Name="PART_Track" IsDirectionReversed="True">
+              <Track.Thumb>
+                <Thumb>
+                  <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                      <Border Background="#88FF71CE" CornerRadius="3"/>
+                    </ControlTemplate>
+                  </Thumb.Template>
+                </Thumb>
+              </Track.Thumb>
+            </Track>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style x:Key="BotaoJogar" TargetType="Button">
       <Setter Property="Foreground" Value="White"/>
       <Setter Property="FontFamily" Value="Bahnschrift SemiBold, Segoe UI"/>
@@ -128,7 +149,7 @@ $xaml = @'
         <TextBlock x:Name="Versao" Grid.Row="1" FontSize="12.5" Foreground="#9FE8FF" Margin="0,2,0,10"/>
         <Border Grid.Row="2" Background="#1AFFFFFF" CornerRadius="10" BorderBrush="#33FFFFFF" BorderThickness="1" Padding="18,14">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <TextBlock x:Name="Novidades" TextWrapping="Wrap" FontSize="13.5" Foreground="#EDE7FF" LineHeight="21"/>
+            <TextBlock x:Name="Novidades" TextWrapping="Wrap" FontSize="13.5" Foreground="#EDE7FF" LineHeight="21" Margin="0,0,12,0"/>
           </ScrollViewer>
         </Border>
       </Grid>
