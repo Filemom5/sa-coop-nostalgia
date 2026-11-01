@@ -5,6 +5,8 @@
 // them, started as a car's would (CAudioEngine::StartRadio: the station goes on where it was). In a vehicle with a radio
 // that radio plays as always; out of it the headphones play again, on their station. For the other players they are one
 // more radio of that station (Radio.cpp: everyone on a station hears the song of whoever has listened to it longest).
+// The game stops a radio that plays out of a vehicle (CAERadioTrackManager::CheckForPause, every frame it plays) unless
+// the ambience's radio plays (an interior's music): with the headphones on, that check finds one playing.
 // An MP3 player shows at the right of the screen (as a phone does in GTA V) while they are put on, the dial turns or the
 // key is held, with the station's name, then fades.
 #include "features/radio/Headphones.h"
@@ -21,6 +23,7 @@
 #include "shared/config/Config.h"
 #include "shared/game/Game.h"
 #include "shared/lib/core/Core.h"
+#include "shared/lib/memory/Memory.h"
 #include "shared/ui/renderer/Renderer.h"
 
 namespace coop::headphones {
@@ -51,6 +54,15 @@ uint64_t g_startMs = 0;
 uint64_t g_showUntilMs = 0;
 
 uint8_t* Manager() { return (uint8_t*)kRadio; }
+bool VehicleRadio();
+
+// CAERadioTrackManager::CheckForPause -> CAudioEngine::IsAmbienceRadioActive: true, a radio may play out of a vehicle
+using AmbienceRadioFn = bool(__fastcall*)(void*, void*);
+AmbienceRadioFn g_origAmbienceRadio = nullptr;
+bool __fastcall HookAmbienceRadio(void* engine, void* edx) {
+    if (g_on && g_playing && !VehicleRadio()) return true;  // the headphones
+    return g_origAmbienceRadio(engine, edx);
+}
 bool RadioOn() { return CallMethod<0x4E8350, bool>(Manager()); }      // CAERadioTrackManager::IsRadioOn
 bool VehicleRadio() { return Call<0x4E9800, bool>(); }                // CAERadioTrackManager::IsVehicleRadioActive
 bool CutsceneRunning() { return Ref<uint8_t>(0xB5F851) != 0; }        // CCutsceneMgr::ms_running
@@ -117,10 +129,25 @@ void DrawPlayer(float alpha) {
     g.Text(ui::FONT_SMALL, sx + 8 * s, sy + 3 * s, status, c(0xFF9FD8FF), 0);
     int8_t last = UserTracks() ? kUserTracksStation : kLastMusicStation;
     g.Text(ui::FONT_SMALL, sx + sw - 8 * s, sy + 3 * s, Format("%02d/%02d", g_station, last), c(0xFF9FD8FF), ui::TEXT_RIGHT);
-    // the station's name, smaller when it does not fit
+    // the station's name: smaller when it does not fit, then on two lines (split between words)
     std::string name = g_on ? StationName(g_station) : std::string(TR("НАУШНИКИ", "HEADPHONES"));
-    ui::FontId font = g.TextWidth(ui::FONT_MENU, name) <= sw - 16 * s ? ui::FONT_MENU : ui::FONT_MENU_SMALL;
-    g.Text(font, sx + sw / 2, sy + 40 * s, name, c(0xFFFFFFFF), ui::TEXT_CENTER | ui::TEXT_SHADOW);
+    float room = sw - 16 * s;
+    if (g.TextWidth(ui::FONT_MENU, name) <= room) {
+        g.Text(ui::FONT_MENU, sx + sw / 2, sy + 40 * s, name, c(0xFFFFFFFF), ui::TEXT_CENTER | ui::TEXT_SHADOW);
+    } else if (g.TextWidth(ui::FONT_MENU_SMALL, name) <= room || name.find(' ') == std::string::npos) {
+        g.Text(ui::FONT_MENU_SMALL, sx + sw / 2, sy + 42 * s, name, c(0xFFFFFFFF), ui::TEXT_CENTER | ui::TEXT_SHADOW);
+    } else {
+        // as many words on the first line as fit, the rest on the second
+        size_t cut = name.find(' ');
+        for (size_t next = name.find(' ', cut + 1); next != std::string::npos; next = name.find(' ', next + 1)) {
+            if (g.TextWidth(ui::FONT_MENU_SMALL, name.substr(0, next)) > room) break;
+            cut = next;
+        }
+        float lh = g.LineHeight(ui::FONT_MENU_SMALL);
+        g.Text(ui::FONT_MENU_SMALL, sx + sw / 2, sy + 32 * s, name.substr(0, cut), c(0xFFFFFFFF), ui::TEXT_CENTER | ui::TEXT_SHADOW);
+        g.Text(ui::FONT_MENU_SMALL, sx + sw / 2, sy + 32 * s + lh, name.substr(cut + 1), c(0xFFFFFFFF),
+               ui::TEXT_CENTER | ui::TEXT_SHADOW);
+    }
     // an equalizer that moves while it plays
     const int bars = 14;
     float bw = (sw - 24 * s) / bars, by = sy + sh - 12 * s, maxH = 54 * s;
@@ -147,6 +174,10 @@ void DrawPlayer(float alpha) {
 class Headphones : public Module {
 public:
     const char* Name() const override { return "Headphones"; }
+    void OnInstallHooks() override {
+        if (!mem::RedirectCallFn(0x4EA5C3, &HookAmbienceRadio, &g_origAmbienceRadio))
+            LOGW("Headphones: CAERadioTrackManager::CheckForPause is not as expected: the radio will stop out of a car");
+    }
     void OnGameShutdown() override { g_playing = false; }
 
     void OnPostProcess() override {

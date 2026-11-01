@@ -7,7 +7,7 @@
 #  - baixa os arquivos que estiverem faltando (quem atualizou com um atualizador antigo, que não conhecia esses arquivos);
 #  - instala o Open Limit Adjuster com o .ini ajustado se não houver nenhum limit adjuster na pasta do jogo nem em scripts\;
 #  - sobe no .ini do Open Limit Adjuster os limites que estiverem abaixo do necessário para 4 jogadores;
-#  - cria o atalho do launcher na área de trabalho (uma vez só) e mantém o ícone dele em dia.
+#  - cria o atalho do launcher na área de trabalho (uma vez só), com o ícone do próprio gta_sa.exe.
 # Fora da pasta do GTA (sem o gta_sa.exe ao lado da pasta coop) ele não instala nada: só avisa.
 param([switch]$SoInstalar, [switch]$SemAbrir)
 
@@ -26,13 +26,12 @@ $Destinos = [ordered]@{
     'atualizador.ps1'               = (Join-Path $Coop 'atualizador.ps1')
     'launcher.ps1'                  = (Join-Path $Coop 'launcher.ps1')
     'logo.png'                      = (Join-Path $PastaLauncher 'logo.png')
-    'atalho.ico'                    = (Join-Path $PastaLauncher 'atalho.ico')
     'III.VC.SA.LimitAdjuster.asi'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.asi')
     'III.VC.SA.LimitAdjuster.ini'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.ini')
     'OpenLimitAdjuster-LICENSE.txt' = (Join-Path (Join-Path $Coop 'licenses') 'OpenLimitAdjuster.txt')
 }
 $Limite = @('III.VC.SA.LimitAdjuster.asi', 'III.VC.SA.LimitAdjuster.ini', 'OpenLimitAdjuster-LICENSE.txt')
-$SemCopia = @('atualizador.ps1', 'launcher.ps1', 'logo.png', 'atalho.ico')  # não guardam .original
+$SemCopia = @('atualizador.ps1', 'launcher.ps1', 'logo.png')  # não guardam .original
 # o mínimo de cada limite no [SALIMITS] do Open Limit Adjuster para 4 jogadores (o jogo tem 140 pedestres e 110 carros)
 $Minimos = [ordered]@{ 'Peds' = 500; 'PedIntelligence' = 500; 'Vehicles' = 500; 'EntryInfoNode' = 4000 }
 $Cabecalho = @{ 'User-Agent' = 'sa-coop-nostalgia-atualizador' }
@@ -183,8 +182,7 @@ function Atualizar-Atalho {
     $atalho = Join-Path ([Environment]::GetFolderPath('Desktop')) 'SA-COOP Nostalgia.lnk'
     $marca = Join-Path $env:LOCALAPPDATA 'SA-COOP Nostalgia\atalho-criado.txt'
     if (-not (Test-Path $atalho) -and (Test-Path $marca) -and ((Get-Content -Raw $marca).Trim() -eq $launcher)) { return }
-    $icone = Join-Path $PastaLauncher 'atalho.ico'
-    if (-not (Test-Path $icone)) { $icone = Executavel-Do-Jogo }
+    $icone = Executavel-Do-Jogo  # o ícone do próprio jogo: só o nome do atalho diz que é o SA-COOP Nostalgia
     $shell = New-Object -ComObject WScript.Shell
     $lnk = $shell.CreateShortcut($atalho)
     $lnk.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'

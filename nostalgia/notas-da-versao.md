@@ -1,19 +1,22 @@
 ## Novo nesta versão
 
-- **Fone na cabeça:** ao tocar **H**, o personagem leva as mãos à cabeça e o fone aparece (some ao tirar ou ao entrar
-  num carro). Os outros jogadores também veem o fone em você.
-- **Ajuste do fone (teste):** se o fone aparecer torto ou fora do lugar, use no chat `/fone x y z rx ry rz` para mover
-  (metros) e girar (graus). `/fone` sozinho mostra os valores atuais.
+- **Rádio do fone corrigida:** o jogo desligava o rádio fora do carro a cada instante, e por isso as músicas pulavam
+  sozinhas. Agora a estação toca normalmente com o fone.
+- **Fone na cabeça corrigido:** o SilentPatch tomava o lugar onde o fone era desenhado; agora ele aparece mesmo com o
+  SilentPatch. `/fone x y z rx ry rz` continua servindo para ajustar a posição.
+- **Nomes grandes no MP3:** o nome da estação diminui ou quebra em duas linhas para caber na tela.
+- **Atalho com o ícone do GTA:** o atalho da área de trabalho usa o ícone do próprio jogo; só o nome muda.
 
-## Da versão anterior
+## Das versões 5 e 6
 
+- **Fone na cabeça:** ao tocar **H**, o personagem leva as mãos à cabeça e o fone aparece; os outros também veem.
 - **Rádio igual para todo mundo** na mesma estação, mesmo em carros diferentes.
 - **Fone de ouvido:** **H** liga e desliga; segurando **H**, a rodinha troca a estação.
 - **MP3 na tela** com o nome da estação.
 
 ## Das versões anteriores
 
-- **Ícone de cliente** no atalho e aviso quando o instalador está fora da pasta do GTA.
+- Aviso quando o instalador está fora da pasta do GTA.
 - **Launcher** com a logo do grupo: atualiza tudo sozinho e mostra as novidades.
 - **Limites ajustados sozinhos** no `.ini` do Open Limit Adjuster (500 pedestres, 500 carros, 4000 EntryInfoNode).
 

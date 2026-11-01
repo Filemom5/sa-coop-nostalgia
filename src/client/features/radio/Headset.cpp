@@ -1,7 +1,8 @@
 // The headphones on the head. The game has no model of them, so ours (HeadsetModel.h, made by tools/headset_model.py:
 // a band and two cups, dark with pink outsides) is drawn at the head bone of each player who wears them, the way the
-// game draws a weapon at a hand: CVisibilityPlugins::RenderWeaponPedsForPC (hooked, ours right after it, in the same
-// render state) copies the bone's matrix into the model's frame, lights it as the ped and renders it.
+// game draws a weapon at a hand (CVisibilityPlugins::RenderWeaponPedsForPC): the bone's matrix into the model's frame,
+// lit as the ped, rendered. Ours comes right after that one, in the same render state: the frame's call of it
+// (in the scene's render, after RenderScene) is redirected, not the function, which SilentPatch replaces with its own.
 //
 // Putting them on or taking them off plays the night vision goggles' animation on the upper body (GOGGLES,
 // goggles_put_on: both hands to the head), and the headset shows or goes as the hands get there. In a vehicle with a
@@ -38,7 +39,7 @@ namespace {
 using namespace game;
 using namespace game::script;
 
-constexpr uintptr_t kRenderWeaponPeds = 0x732F30;  // CVisibilityPlugins::RenderWeaponPedsForPC
+constexpr uintptr_t kCallRenderWeaponPeds = 0x53EAC4;  // the frame's call of CVisibilityPlugins::RenderWeaponPedsForPC
 constexpr int kBoneHead = 5;                       // BONE_HEAD
 constexpr uint32_t kCombinePreConcat = 1;          // rwCOMBINEPRECONCAT
 constexpr uint64_t kHandsUpMs = 700;               // the hands reach the head this far into the animation
@@ -163,7 +164,10 @@ void ShowFit() {
 class Headset : public Module {
 public:
     const char* Name() const override { return "Headset"; }
-    void OnInstallHooks() override { mem::HookFn(kRenderWeaponPeds, &HookRenderWeaponPeds, &g_origRender, "CVisibilityPlugins::RenderWeaponPedsForPC"); }
+    void OnInstallHooks() override {
+        if (!mem::RedirectCallFn(kCallRenderWeaponPeds, &HookRenderWeaponPeds, &g_origRender))
+            LOGW("Headphones: the scene's render is not as expected: no headset on the head");
+    }
     void OnSessionEnd() override {
         g_remote.clear();
         g_told = false;
