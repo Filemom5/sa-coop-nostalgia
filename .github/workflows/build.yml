@@ -1,12 +1,11 @@
-# SA-COOP Nostalgia: builds on every push to main (to catch a broken build), and a tag like nostalgia-2 also publishes a
-# GitHub release with the files the updater (nostalgia/coop/atualizador.ps1) downloads, and the installer zip for new
-# players. The release text is nostalgia/notas-da-versao.md.
+# SA-COOP Nostalgia: builds on every push to main. When nostalgia/versao.txt names a version that has no release yet
+# (nostalgia-2, say), it also publishes that release, with the files the updater (nostalgia/coop/atualizador.ps1)
+# downloads and the installer zip for new players. The release text is nostalgia/notas-da-versao.md.
 name: build
 
 on:
   push:
     branches: [main]
-    tags: ["nostalgia-*"]
   workflow_dispatch:
 
 permissions:
@@ -59,11 +58,28 @@ jobs:
           name: SA-COOP-Nostalgia
           path: release/*
 
+      - name: Is the version new
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = (Get-Content -Raw nostalgia/versao.txt).Trim()
+          $found = $false
+          try { gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null; $found = ($LASTEXITCODE -eq 0) } catch { }
+          $new = if ($found) { 'false' } else { 'true' }
+          $global:LASTEXITCODE = 0
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "new=$new" >> $env:GITHUB_OUTPUT
+          "version $tag, new: $new"
+
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/nostalgia-')
+        if: github.ref == 'refs/heads/main' && steps.version.outputs.new == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: SA-COOP Nostalgia ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: SA-COOP Nostalgia ${{ steps.version.outputs.tag }}
           body_path: nostalgia/notas-da-versao.md
           make_latest: true
           files: |
