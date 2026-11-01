@@ -1,5 +1,10 @@
 ## Novo nesta versão
 
+- **Ícone novo do atalho:** um ícone de cliente do GTA San Andreas com a logo do grupo no canto.
+- **Aviso de pasta errada:** se o instalador for extraído fora da pasta do GTA, ele avisa em vez de instalar lá.
+
+## Da versão anterior
+
 - **Launcher:** o atalho **SA-COOP Nostalgia** na área de trabalho, com a logo do grupo, abre esta janela. Ela atualiza
   tudo sozinha e mostra as novidades: é só clicar em JOGAR.
 - **Limites ajustados sozinhos:** quem já tinha o Open Limit Adjuster com os números do jogo passa a ter 500 pedestres,
@@ -17,7 +22,8 @@
 
 ## Como instalar
 
-Primeira vez: tenha o SA:COOP 0.3.2 instalado, baixe o **SA-COOP-Nostalgia-instalador.zip** abaixo e extraia dentro da
-pasta do GTA (onde fica o `gta_sa.exe`). Abra uma vez pelo `Jogar SA-COOP.bat`: ele cria o atalho na área de trabalho.
+Primeira vez: tenha o SA:COOP 0.3.2 instalado, baixe o **SA-COOP-Nostalgia-instalador.zip** abaixo, coloque o zip
+dentro da pasta do GTA (onde fica o `gta_sa.exe`) e use **Extrair aqui** (o "Extrair tudo" do Windows cria uma subpasta
+e não serve). Abra uma vez pelo `Jogar SA-COOP.bat`: ele cria o atalho na área de trabalho.
 
-Quem já estava na nostalgia-1 ou 2: abra pelo `Jogar SA-COOP.bat` duas vezes. Na segunda, o atalho aparece.
+Quem já tinha instalado: o atalho e o `.bat` atualizam sozinhos; o ícone novo aparece na segunda vez que abrir.

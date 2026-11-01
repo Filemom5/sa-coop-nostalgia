@@ -8,6 +8,7 @@
 #  - instala o Open Limit Adjuster com o .ini ajustado se não houver nenhum limit adjuster na pasta do jogo nem em scripts\;
 #  - sobe no .ini do Open Limit Adjuster os limites que estiverem abaixo do necessário para 4 jogadores;
 #  - cria o atalho do launcher na área de trabalho (uma vez só) e mantém o ícone dele em dia.
+# Fora da pasta do GTA (sem o gta_sa.exe ao lado da pasta coop) ele não instala nada: só avisa.
 param([switch]$SoInstalar, [switch]$SemAbrir)
 
 $ErrorActionPreference = 'Stop'
@@ -25,13 +26,13 @@ $Destinos = [ordered]@{
     'atualizador.ps1'               = (Join-Path $Coop 'atualizador.ps1')
     'launcher.ps1'                  = (Join-Path $Coop 'launcher.ps1')
     'logo.png'                      = (Join-Path $PastaLauncher 'logo.png')
-    'icone.ico'                     = (Join-Path $PastaLauncher 'icone.ico')
+    'atalho.ico'                    = (Join-Path $PastaLauncher 'atalho.ico')
     'III.VC.SA.LimitAdjuster.asi'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.asi')
     'III.VC.SA.LimitAdjuster.ini'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.ini')
     'OpenLimitAdjuster-LICENSE.txt' = (Join-Path (Join-Path $Coop 'licenses') 'OpenLimitAdjuster.txt')
 }
 $Limite = @('III.VC.SA.LimitAdjuster.asi', 'III.VC.SA.LimitAdjuster.ini', 'OpenLimitAdjuster-LICENSE.txt')
-$SemCopia = @('atualizador.ps1', 'launcher.ps1', 'logo.png', 'icone.ico')  # não guardam .original
+$SemCopia = @('atualizador.ps1', 'launcher.ps1', 'logo.png', 'atalho.ico')  # não guardam .original
 # o mínimo de cada limite no [SALIMITS] do Open Limit Adjuster para 4 jogadores (o jogo tem 140 pedestres e 110 carros)
 $Minimos = [ordered]@{ 'Peds' = 500; 'PedIntelligence' = 500; 'Vehicles' = 500; 'EntryInfoNode' = 4000 }
 $Cabecalho = @{ 'User-Agent' = 'sa-coop-nostalgia-atualizador' }
@@ -174,14 +175,15 @@ function Executavel-Do-Jogo {
     return $executavel
 }
 
-# O atalho "SA-COOP Nostalgia" na área de trabalho abre o launcher. É criado uma vez só: se a pessoa apagar, não volta.
+# O atalho "SA-COOP Nostalgia" na área de trabalho abre o launcher. É criado uma vez por pasta do jogo: se a pessoa
+# apagar, só volta se o jogo for instalado em outra pasta. Se existir, é refeito toda vez (pasta e ícone em dia).
 function Atualizar-Atalho {
     $launcher = Join-Path $Coop 'launcher.ps1'
     if (-not (Test-Path $launcher)) { return }
     $atalho = Join-Path ([Environment]::GetFolderPath('Desktop')) 'SA-COOP Nostalgia.lnk'
     $marca = Join-Path $env:LOCALAPPDATA 'SA-COOP Nostalgia\atalho-criado.txt'
-    if (-not (Test-Path $atalho) -and (Test-Path $marca)) { return }
-    $icone = Join-Path $PastaLauncher 'icone.ico'
+    if (-not (Test-Path $atalho) -and (Test-Path $marca) -and ((Get-Content -Raw $marca).Trim() -eq $launcher)) { return }
+    $icone = Join-Path $PastaLauncher 'atalho.ico'
     if (-not (Test-Path $icone)) { $icone = Executavel-Do-Jogo }
     $shell = New-Object -ComObject WScript.Shell
     $lnk = $shell.CreateShortcut($atalho)
@@ -193,7 +195,7 @@ function Atualizar-Atalho {
     $lnk.Description = 'SA-COOP Nostalgia'
     $lnk.Save()
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $marca) | Out-Null
-    Set-Content -Path $marca -Value 'ok' -Encoding ASCII
+    Set-Content -Path $marca -Value $launcher -Encoding UTF8
 }
 
 if ($SoInstalar) {
@@ -207,6 +209,13 @@ if ($SoInstalar) {
         Start-Sleep -Seconds 5
         exit 1
     }
+}
+
+if (-not (Test-Path (Executavel-Do-Jogo))) {
+    Write-Host ('Esta pasta não é a do GTA (não tem o gta_sa.exe): ' + $Jogo)
+    Write-Host 'Extraia o instalador dentro da pasta do GTA, onde fica o gta_sa.exe, e abra o Jogar SA-COOP.bat de lá.'
+    if (-not $SemAbrir) { Read-Host 'Aperte Enter para fechar' | Out-Null }
+    return
 }
 
 Write-Host 'Procurando atualização...'

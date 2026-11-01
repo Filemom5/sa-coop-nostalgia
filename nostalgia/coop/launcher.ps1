@@ -162,7 +162,7 @@ $xaml = @'
         <ColumnDefinition Width="240"/>
       </Grid.ColumnDefinitions>
       <StackPanel Grid.Column="0" VerticalAlignment="Center">
-        <TextBlock x:Name="Status" Text="Procurando atualização..." FontSize="14" Foreground="#EDE7FF" TextTrimming="CharacterEllipsis"/>
+        <TextBlock x:Name="Status" Text="Procurando atualização..." FontSize="14" Foreground="#EDE7FF" TextWrapping="Wrap"/>
         <ProgressBar x:Name="Barra" Height="4" Margin="0,10,0,0" IsIndeterminate="True"
                      Foreground="#01CDFE" Background="#26FFFFFF" BorderThickness="0"/>
       </StackPanel>
@@ -281,7 +281,11 @@ function Acompanhar {
     Mostrar-Logo
     Mostrar-Versao
     $c.Barra.Visibility = [Windows.Visibility]::Hidden
-    $c.Jogar.IsEnabled = $true
+    if (Test-Path (Executavel-Do-Jogo)) {
+        $c.Jogar.IsEnabled = $true
+    } else {
+        $c.Status.Text = 'Esta pasta não é a do GTA (não tem o gta_sa.exe). Extraia o instalador dentro da pasta do GTA e abra o Jogar SA-COOP.bat de lá.'
+    }
     $script:ps.Dispose()
     $script:espaco.Close()
 }
@@ -300,7 +304,7 @@ $c.Jogar.Add_Click({
         Start-Process -FilePath (Executavel-Do-Jogo) -WorkingDirectory $Jogo
         $janela.Close()
     } catch {
-        $c.Status.Text = 'Não achei o gta_sa.exe na pasta do jogo.'
+        $c.Status.Text = 'Não achei o gta_sa.exe: o launcher precisa estar na pasta do GTA.'
     }
 })
 

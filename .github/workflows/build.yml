@@ -52,7 +52,7 @@ jobs:
           Copy-Item nostalgia/coop/atualizador.ps1 release/
           Copy-Item nostalgia/coop/launcher.ps1 release/
           Copy-Item nostalgia/coop/launcher/logo.png release/
-          Copy-Item nostalgia/coop/launcher/icone.ico release/
+          Copy-Item nostalgia/coop/launcher/atalho.ico release/
           Compress-Archive -Path "nostalgia/Jogar SA-COOP.bat", "nostalgia/coop" -DestinationPath release/SA-COOP-Nostalgia-instalador.zip
           Get-ChildItem release
 
@@ -109,7 +109,7 @@ jobs:
             release/atualizador.ps1
             release/launcher.ps1
             release/logo.png
-            release/icone.ico
+            release/atalho.ico
             release/SA-COOP-Nostalgia-instalador.zip
             release/III.VC.SA.LimitAdjuster.asi
             release/III.VC.SA.LimitAdjuster.ini
