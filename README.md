@@ -5,7 +5,7 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
 
 ## O que tem a mais
 
-- **Até 4 jogadores** no servidor (`max_players = 4` no `coop\server.ini`).
+- **Até 6 jogadores** no servidor (`max_players = 6` no `server.ini`; pelo F9 o servidor já abre com 6 vagas).
 - **Rádio compartilhada no carro:** todos no mesmo carro ouvem a mesma estação e a mesma música, no mesmo ponto.
   Qualquer um no carro pode trocar a estação.
 - **Rádio igual para todos:** na mesma estação, todos ouvem a mesma música, mesmo em carros diferentes (a de quem ouve a
@@ -33,7 +33,7 @@ Karimov-Akbar) para jogar com os amigos. Baseada no SA:COOP **0.3.2**.
   modelos do próprio jogo quando eles carregam.
 - **Cópias mais suaves** para quem não é o host: trem, caixas e objetos de missão e carros dos outros.
 - **Registro de rede** no `coop\coop.log` a cada 10 s (ping, perda, FPS, atrasos, teleportes).
-- **Open Limit Adjuster** com 500 pedestres e 500 carros (o jogo tem 140 e 110), contra o crash `0x544BC8` com 4
+- **Open Limit Adjuster** com 500 pedestres e 500 carros (o jogo tem 140 e 110), contra o crash `0x544BC8` com vários
   jogadores. O atualizador só instala se você ainda não tiver um limit adjuster (na pasta do jogo ou em `scripts`); se
   já tiver o Open Limit Adjuster, ele sobe no `.ini` os limites que estiverem abaixo disso.
 - **Launcher** com a logo do grupo (atalho **SA-COOP Nostalgia** na área de trabalho): atualiza sozinho, mostra as
@@ -58,7 +58,8 @@ evitar isso, mova a pasta do jogo para outro lugar, por exemplo `C:\Jogos\GTA Sa
 
 ## Para o host
 
-O `coop-server.exe` desta versão aceita até 4 jogadores. Se existir `coop\server.ini`, deixe `max_players = 4`.
+O `coop-server.exe` desta versão aceita até 6 jogadores. Criando o servidor pelo F9, ele já abre com 6 vagas; rodando o
+`coop-server.exe` sozinho, deixe `max_players = 6` no `server.ini`.
 
 ## Código e licença
 

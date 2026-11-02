@@ -13,10 +13,10 @@
 
 namespace coop::proto {
 
-constexpr int kMaxPlayers = 4;  // hard protocol limit (the game client supports 2 at the moment)
+constexpr int kMaxPlayers = 6;  // hard protocol limit (sa-coop-nostalgia: six)
 // what the game client supports: the other player's character takes the game's second player slot (CWorld::Players[1]),
 // and a third player's could not be made (fires, props and trains are keyed by the sender's own ids too)
-constexpr int kGamePlayers = 4;  // sa-coop-nostalgia: four players (CWorld::Players[1] is taken only while a copy is processed)
+constexpr int kGamePlayers = 6;  // sa-coop-nostalgia: six players (CWorld::Players[1] is taken only while a copy is processed)
 constexpr uint8_t kServerId = 255;
 constexpr size_t kMaxChatLen = 160;
 constexpr size_t kWorldChunk = 16 * 1024;

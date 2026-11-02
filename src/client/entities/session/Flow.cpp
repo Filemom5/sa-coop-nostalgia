@@ -163,6 +163,7 @@ bool StartServerProcess(const std::wstring& worldPath, bool newGame) {
     if (newGame) cmd += L" --new-game";
     cmd += cfg.friendlyFire ? L" --friendly-fire 1" : L" --friendly-fire 0";  // the checkbox wins over server.ini
     cmd += cfg.partnerTeleport ? L" --partner-teleport 1" : L" --partner-teleport 0";
+    cmd += L" --max " + std::to_wstring(proto::kGamePlayers);  // all the seats: a server.ini of before says 4
 
     if (!g_serverJob) {
         g_serverJob = CreateJobObjectW(nullptr, nullptr);

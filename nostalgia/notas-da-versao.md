@@ -1,5 +1,10 @@
 ## Novo nesta versão
 
+- **Até 6 jogadores:** o servidor agora aceita 6 jogadores (eram 4). Quem cria o servidor pelo F9 já abre com 6 vagas,
+  mesmo que o `server.ini` antigo diga 4. Ainda em teste: se algo estranhar com 5 ou 6, avisem.
+
+## Da versão 1.16.0
+
 - **Corta-ventos do grupo:** o **Grn Windbreaker** virou o corta-vento lilás **Matunas** (emblema Nostalgia no peito e
   "Matunas" nas costas), e o **Blk Windbreaker** virou o preto e roxo **Nostalgia** (faixa degradê com grade, punhos e
   barra listrados). Os dois já aparecem no guarda-roupa de todas as casas, sem precisar comprar, com os nomes
