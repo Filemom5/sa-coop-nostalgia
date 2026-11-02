@@ -96,6 +96,63 @@ BallPath::BallPath(const Court& c, const Shot& s) {
     Fall(flight, to, {dx * speed, dy * speed, 1.8f + 2.2f * Rand(rng)}, rng);
 }
 
+void BallPath::Throw(float t0, const V3& from, const V3& to, float secs) {
+    secs = std::max(secs, 0.05f);
+    V3 v{(to.x - from.x) / secs, (to.y - from.y) / secs, (to.z - from.z) / secs + kGravity * secs * 0.5f};
+    m_segs.push_back({t0, t0 + secs, from, v, kGravity});
+}
+
+void BallPath::Stop(float t, const V3& at) {
+    m_restAt = at;
+    m_rest = t;
+}
+
+BallPath BallPath::Toss(const V3& from, const V3& to, float secs, float floorZ, bool fall, uint32_t seed) {
+    BallPath p;
+    p.m_floor = floorZ;
+    p.Throw(0.0f, from, to, secs);
+    p.m_rim = secs;
+    if (!fall) {
+        p.Stop(secs, to);
+        return p;
+    }
+    // on as it came, a little slower: the vertical speed it arrives with
+    float dx = (to.x - from.x) / secs * 0.6f, dy = (to.y - from.y) / secs * 0.6f;
+    float vz = (to.z - from.z) / secs - kGravity * secs * 0.5f;
+    p.Fall(secs, to, {dx, dy, vz}, seed);
+    return p;
+}
+
+BallPath BallPath::Bank(const V3& from, const V3& via, const V3& to, float secs1, float secs2, float floorZ, bool fall,
+                        uint32_t seed) {
+    BallPath p;
+    p.m_floor = floorZ;
+    p.Throw(0.0f, from, via, secs1);
+    p.Throw(secs1, via, to, secs2);
+    float t = secs1 + secs2;
+    p.m_rim = t;
+    if (!fall) {
+        p.Stop(t, to);
+        return p;
+    }
+    float dx = (to.x - via.x) / secs2 * 0.6f, dy = (to.y - via.y) / secs2 * 0.6f;
+    float vz = (to.z - via.z) / secs2 - kGravity * secs2 * 0.5f;
+    p.Fall(t, to, {dx, dy, vz}, seed);
+    return p;
+}
+
+BallPath BallPath::Knock(const Court& c, const V3& from, uint32_t seed) {
+    BallPath p;
+    p.m_floor = c.floorZ;
+    uint32_t rng = seed;
+    float deg = (Rand(rng) - 0.5f) * 140.0f, dx, dy;
+    Turn(c, deg, dx, dy);
+    float speed = 3.5f + 2.5f * Rand(rng);
+    p.m_rim = 0.0f;
+    p.Fall(0.0f, from, {dx * speed, dy * speed, 1.0f + 1.5f * Rand(rng)}, rng);
+    return p;
+}
+
 void BallPath::Fall(float t0, V3 p, V3 v, uint32_t& rng) {
     float rest = m_floor + kBallRadius;
     for (int bounce = 0; bounce < 8; ++bounce) {

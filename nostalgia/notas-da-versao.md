@@ -1,5 +1,25 @@
 ## Novo nesta versão
 
+- **Basquete no estilo NBA Street:**
+  - **Enterrada em terceira pessoa:** a câmera não pula mais para a primeira pessoa. Você vê a enterrada inteira.
+  - **Regras de rua:** até 21, 1 ponto de dentro do arco e 2 de fora, ganha com 2 de vantagem. `/basquete 11` muda o
+    alvo, e `/basquete nba` joga com 2 e 3 pontos.
+  - **Turbo:** o Espaço corre gastando uma barra que enche sozinha. Com turbo, a enterrada sai de mais longe.
+  - **Truques com Shift:** crossover andando, giro correndo com Espaço e firula parado. Um truque bem na frente do
+    defensor pode **quebrar o tornozelo** dele: ele cai e você passa.
+  - **Finta com C:** começa o arremesso e desiste. Se o defensor pular para o toco, ele cai na finta. C no ar cancela o
+    arremesso.
+  - **Passe no botão direito:** para o colega. Com Espaço: **ponte aérea** para o colega perto do aro, passe quicando na
+    cabeça do defensor, ou tabela para você mesmo (no 1x1 e no treino, a tabela vira enterrada se você estiver perto).
+  - **Defesa:** botão esquerdo rouba (melhor durante um truque ou firula), Shift dá toco (e tapinha perto do aro), e
+    segurar o botão direito põe na postura de defesa, com A e D para os lados.
+  - **Estilo e Gamebreaker:** truques seguidos fazem combo. O estilo só conta quando a cesta cai e enche a barra do time.
+    Barra cheia: a próxima cesta vale +1 e tira 1 ponto do outro time.
+  - **Relógio de 24 s** para arremessar. Passes podem ser interceptados, e arremessos marcados de perto caem menos.
+  - `/basquete comandos` mostra tudo isso no meio da tela.
+
+## Da versão 1.20.2
+
 - **Basquete, ajustes do primeiro teste:**
   - A bola agora fica na mão do CJ e acompanha o drible. Antes ela ficava no meio do corpo.
   - **Arremesso no botão esquerdo do mouse:** aperte para pular e solte quando a barra chegar na marca, ou dê um toque

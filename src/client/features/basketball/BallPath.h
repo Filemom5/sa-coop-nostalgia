@@ -41,6 +41,14 @@ class BallPath {
 public:
     BallPath() = default;
     BallPath(const Court& court, const Shot& shot);
+    // a throw from `from` to `to` in `secs` (a pass): there at RimTime(); then falling and bouncing on (`fall`), else
+    // staying there
+    static BallPath Toss(const V3& from, const V3& to, float secs, float floorZ, bool fall, uint32_t seed);
+    // two throws in a row, off something at `via` (the backboard, a defender's head): at `to` at RimTime()
+    static BallPath Bank(const V3& from, const V3& via, const V3& to, float secs1, float secs2, float floorZ, bool fall,
+                         uint32_t seed);
+    // a blocked shot: knocked from `from` back into the court, at once a loose ball
+    static BallPath Knock(const Court& court, const V3& from, uint32_t seed);
     V3 At(float t) const;                      // the ball's centre t seconds after the shot
     float RimTime() const { return m_rim; }    // it reaches the rim: a basket counts then
     float RestTime() const { return m_rest; }  // it lies still from then on
@@ -57,6 +65,8 @@ private:
     V3 m_restAt;
     float m_rim = 0, m_rest = 0, m_floor = 0;
     void Fall(float t0, V3 p, V3 v, uint32_t& rng);  // bounces till it lies still
+    void Throw(float t0, const V3& from, const V3& to, float secs);  // a ballistic piece, from -> to in secs
+    void Stop(float t, const V3& at);                                // still from then on
 };
 
 }  // namespace coop::basket

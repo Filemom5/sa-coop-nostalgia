@@ -46,6 +46,27 @@ int main() {
         longest = std::fmax(longest, p.RestTime());
     }
     printf("rebounds rest up to %.1f m from the rim, still after %.1f s at most\n", farthest, longest);
+    // passes: there on time, smooth, never under the floor
+    for (uint32_t seed = 1; seed <= 500; ++seed) {
+        V3 from{c.rim.x + c.fx * 6, c.rim.y + c.fy * 6, c.floorZ + 1.2f}, to{c.rim.x + c.fx * 2 - c.fy * 3, c.rim.y + c.fy * 2 + c.fx * 3, c.floorZ + 1.1f};
+        V3 board{c.rim.x - c.fx * 0.15f, c.rim.y - c.fy * 0.15f, c.rim.z + 0.55f};
+        BallPath ps[4] = {BallPath::Toss(from, to, 0.5f, c.floorZ, false, seed), BallPath::Toss(from, c.rim, 0.9f, c.floorZ, true, seed),
+                          BallPath::Bank(from, board, to, 0.55f, 0.6f, c.floorZ, true, seed), BallPath::Knock(c, from, seed)};
+        V3 want[4] = {to, c.rim, to, from};
+        for (int k = 0; k < 4; ++k) {
+            V3 at = ps[k].At(ps[k].RimTime());
+            float off = std::sqrt((at.x - want[k].x) * (at.x - want[k].x) + (at.y - want[k].y) * (at.y - want[k].y) + (at.z - want[k].z) * (at.z - want[k].z));
+            if (off > 0.02f) printf("pass %d seed %u: %.2f m off its target\n", k, seed, off), bad++;
+            V3 last = ps[k].At(0.0f);
+            for (float t = 1.0f / 60; t < ps[k].RestTime() + 0.5f; t += 1.0f / 60) {
+                V3 n = ps[k].At(t);
+                float step = std::sqrt((n.x - last.x) * (n.x - last.x) + (n.y - last.y) * (n.y - last.y) + (n.z - last.z) * (n.z - last.z));
+                if (step > 0.5f) { printf("pass %d seed %u: a jump of %.2f m\n", k, seed, step), bad++; break; }
+                if (n.z < c.floorZ + kBallRadius - 0.01f) { printf("pass %d seed %u: under the floor\n", k, seed), bad++; break; }
+                last = n;
+            }
+        }
+    }
     printf("chance: 2 m perfect %.2f good %.2f bad %.2f; 5 m good %.2f; 7 m perfect %.2f good %.2f; never released %.2f\n",
            Chance(2, 0.01f), Chance(2, 0.05f), Chance(2, 0.2f), Chance(5, 0.05f), Chance(7, 0.0f), Chance(7, 0.05f), Chance(3, 1.0f));
     if (Points(5.9f) != 2 || Points(6.1f) != 3) printf("points wrong\n"), bad++;
