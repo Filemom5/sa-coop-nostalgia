@@ -1,5 +1,14 @@
 ## Novo nesta versão
 
+- **Basquete, ajustes do primeiro teste:**
+  - A bola agora fica na mão do CJ e acompanha o drible. Antes ela ficava no meio do corpo.
+  - **Arremesso no botão esquerdo do mouse:** aperte para pular e solte quando a barra chegar na marca, ou dê um toque
+    e aperte de novo na marca. Antes só valia segurar e soltar, então quase todo arremesso saía "Bad".
+  - O **Espaço** voltou a ser correr: segurando, o CJ corre com a bola. A enterrada é o botão esquerdo correndo.
+  - **`/basquete comandos`** abre no meio da tela um quadro com todos os comandos, as teclas e as regras.
+
+## Da versão 1.20.1
+
 - **Basquete sem crash:** o jogo fechava logo depois do `/basquete`. A bola recebia a animação antes de o jogo terminar
   de criá-la, e agora ela espera o modelo aparecer. O drible também não trava mais na primeira animação.
 - **Cesta mais fácil de achar:** o `/basquete` agora funciona a até 25 m da cesta. Mais longe que isso, o chat diz a

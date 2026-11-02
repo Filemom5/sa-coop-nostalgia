@@ -181,6 +181,10 @@ struct Match {
     uint64_t overMs = 0;
 } g_m;
 
+// /basquete comandos: the list in the middle of the screen, till asked again or a minute on
+uint64_t g_helpUntil = 0;
+constexpr uint64_t kHelpMs = 60000;
+
 struct Banner {
     std::string text;
     uint32_t colour = 0xFFFFFFFF;
@@ -337,7 +341,9 @@ bool BallMake(const V3& at) {
 void BallHeld(CPed* ped) {
     if (!ped) return BallDelete();
     int pedRef = GetPedRef(ped);
-    if (g_ball.handle && g_ball.on != pedRef) BallDelete();  // a fresh one: the last one's pose is in its frames
+    // in another one's hands: a fresh one (the last pose is in its frames). Not one waiting for its model: made anew
+    // every frame, it never got one, and stood in CJ's middle unattached (02.11)
+    if (g_ball.handle && g_ball.on >= 0 && g_ball.on != pedRef) BallDelete();
     if (!BallMake(ToV3(ped->GetPosition()))) return;
     if (!HasClump(g_ball.handle)) return;  // its model comes next frame
     if (g_ball.on != pedRef) {
@@ -372,7 +378,8 @@ struct Mine {
     Move move = Move::None;
     uint64_t sinceMs = 0;
     float heading = 0.0f;  // degrees
-    // the jump shot
+    // the jump shot: Fire held since the jump (let go at the top), or tapped (pressed again at the top)
+    bool held = false;
     bool released = false, gone = false;
     float releasePart = -1.0f;
     int timing = -1;
@@ -449,13 +456,25 @@ void StartShot() {
     g_me.move = Move::Shoot;
     g_me.sinceMs = NowMs();
     g_me.released = g_me.gone = false;
+    g_me.held = true;
     g_me.releasePart = -1.0f;
 }
 
-void UpdateShot(bool sprint) {
+// let go this early, Fire was a tap to jump: the next press is the release (as the players took it, 02.11: every shot was
+// let go 0.33 before the top, and "Bad")
+constexpr float kTap = 0.12f;
+
+void UpdateShot(bool fire, bool firePressed) {
     float part = 0.0f;
     if (!Playing(A_JUMP_SHOT, &part)) part = (NowMs() - g_me.sinceMs) / 1000.0f / std::max(Length(A_JUMP_SHOT), 0.01f);
-    if (!g_me.released && !sprint) g_me.released = true, g_me.releasePart = part;
+    if (!g_me.released) {
+        if (g_me.held && !fire) {
+            if (part >= kTap) g_me.released = true, g_me.releasePart = part;
+            else g_me.held = false;
+        } else if (!g_me.held && firePressed) {
+            g_me.released = true, g_me.releasePart = part;
+        }
+    }
     if (!g_me.gone && part >= kPeak && (g_me.released || part >= kPeak + 0.1f)) {
         float error = g_me.released ? std::fabs(g_me.releasePart - kPeak) : 1.0f;
         CPlayerPed* cj = FindPlayerPed(0);
@@ -560,14 +579,16 @@ void UpdateMine() {
     const CControllerState& now = pad->NewState;
     const CControllerState& was = pad->OldState;
     bool typing = ui::TheChat().IsOpen() || MenuActive();
+    // Fire (the left mouse button: CPad::GetWeapon's ButtonCircle) shoots; Sprint (Space: ButtonCross) runs
+    bool fire = !typing && now.ButtonCircle != 0;
+    bool pressed = fire && was.ButtonCircle == 0;
     bool sprint = !typing && now.ButtonCross != 0;
-    bool pressed = sprint && was.ButtonCross == 0;
     float sx = typing ? 0.0f : now.LeftStickX / 128.0f, sy = typing ? 0.0f : -now.LeftStickY / 128.0f;
     float mag = std::min(std::hypot(sx, sy), 1.0f);
-    bool run = mag >= 0.8f && !now.m_bPedWalk;
+    bool run = sprint;
     switch (g_me.move) {
     case Move::Shoot:
-        return UpdateShot(sprint);
+        return UpdateShot(fire, pressed);
     case Move::Dunk:
         return UpdateDunk();
     case Move::Pickup:
@@ -813,10 +834,10 @@ void Begin(uint32_t id, uint8_t judge, const Court& c, int target, bool practice
     if (g_m.playing) {
         std::string blue, red;
         for (auto& [pid, t] : teams) (t ? red : blue) += (t ? red : blue).empty() ? Name(pid) : ", " + Name(pid);
-        ui::TheChat().AddSystem(practice ? TR("Тренировка: бег (Sprint) - бросок, у кольца с разбега - данк. Выйти: /basquete sair.",
-                                              "Practice: Sprint shoots, Sprint running at the rim dunks. Leave with /basquete sair.")
-                                         : Format(TR("Баскетбол до %d очков: синие (%s) против красных (%s).",
-                                                     "Basketball to %d: blue (%s) against red (%s)."),
+        ui::TheChat().AddSystem(practice ? TR("Тренировка. Все команды: /basquete comandos. Выйти: /basquete sair.",
+                                              "Practice. All the commands: /basquete comandos. Leave with /basquete sair.")
+                                         : Format(TR("Баскетбол до %d очков: синие (%s) против красных (%s). Команды: /basquete comandos.",
+                                                     "Basketball to %d: blue (%s) against red (%s). Commands: /basquete comandos."),
                                                   target, blue.c_str(), red.c_str()));
         Show(practice ? TR("Тренировка", "Practice") : TR("Баскетбол!", "Basketball!"), 0xFFFFC864);
     }
@@ -1010,6 +1031,10 @@ void InviteTick() {
 bool Command(const std::vector<std::string>& args) {
     std::string a = args.empty() ? "" : args[0];
     for (char& ch : a) ch = (char)tolower((unsigned char)ch);
+    if (a == "comandos" || a == "ajuda" || a == "help" || a == "commands") {
+        g_helpUntil = NowMs() < g_helpUntil ? 0 : NowMs() + kHelpMs;
+        return true;
+    }
     if (a == "sair" || a == "leave" || a == "exit") {
         if (!g_m.on) {
             ui::TheChat().AddError(TR("Вы не в игре в баскетбол.", "You are not in a basketball game."));
@@ -1128,6 +1153,75 @@ void Tick() {
 }
 
 // ---------------------------------------------------------------- the screen
+// /basquete comandos: what to type and which keys, in a dark box in the middle
+void RenderHelp() {
+    struct Row {
+        const char* key;
+        const char* what;
+    };
+    const Row chat[] = {
+        {"/basquete", TR("позвать игроков у кольца (до 11 очков)", "ask the players near the hoop (to 11 points)")},
+        {"/basquete 21", TR("до 21 очка (любое число от 5 до 31)", "to 21 points (any number from 5 to 31)")},
+        {"/basquete treino", TR("тренировка в одиночку", "practise alone")},
+        {"/basquete sair", TR("выйти из игры", "leave the game")},
+        {"/basquete comandos", TR("показать или скрыть этот список", "show or hide this list")},
+        {"Y / N", TR("принять или отклонить приглашение", "say yes or no to an invitation")},
+    };
+    const Row keys[] = {
+        {"W A S D", TR("идти с мячом (дриблинг)", "walk with the ball (dribbling)")},
+        {TR("Пробел", "Space"), TR("бежать с мячом", "run with the ball")},
+        {TR("Левая кнопка мыши", "Left mouse button"),
+         TR("бросок: нажмите для прыжка, отпустите у отметки", "shoot: press to jump, let go at the mark")},
+        {"", TR("или нажмите и нажмите ещё раз у отметки", "or tap it, and press again at the mark")},
+        {TR("ЛКМ на бегу у кольца", "Left mouse running at the rim"), TR("данк (лицом к кольцу, до 3,5 м)", "dunk (facing the rim, up to 3.5 m)")},
+        {TR("Свободный мяч", "Loose ball"), TR("подбор: подойдите к нему", "rebound: walk into it")},
+    };
+    const char* const rules[] = {
+        TR("2 очка из-под дуги, 3 из-за дуги.", "2 points inside the arc, 3 from outside it."),
+        TR("После попадания или подбора в защите выведите мяч за дугу перед броском.",
+           "After a basket or a defensive rebound, take the ball outside the arc before you shoot."),
+        TR("Мяч дальше 12 м от кольца - аут, мяч у соперника.", "The ball over 12 m from the rim is out: the other team's."),
+    };
+    auto& g = ui::Gfx();
+    float s = g.Scale(), lh = g.LineHeight(ui::FONT_SMALL), th = g.LineHeight(ui::FONT_MENU);
+    float keyW = 0.0f, whatW = 0.0f;
+    for (const Row* list : {chat, keys})
+        for (size_t i = 0; i < 6; ++i) {
+            keyW = std::max(keyW, g.TextWidth(ui::FONT_SMALL, list[i].key));
+            whatW = std::max(whatW, g.TextWidth(ui::FONT_SMALL, list[i].what));
+        }
+    for (const char* r : rules) whatW = std::max(whatW, g.TextWidth(ui::FONT_SMALL, r) - keyW - 24 * s);
+    float pad = 26 * s, w = keyW + 24 * s + whatW + 2 * pad;
+    float h = pad * 2 + th + 10 * s + (6 + 6) * lh + 3 * lh + 3 * (lh + 8 * s);
+    float x = (g.Width() - w) * 0.5f, y = (g.Height() - h) * 0.5f;
+    g.Rect(x, y, w, h, ui::Argb(205, 0, 0, 0));
+    g.RectOutline(x, y, w, h, ui::Argb(120, 255, 200, 100), 1.5f * s);
+    float cy = y + pad;
+    g.Text(ui::FONT_MENU, g.Width() * 0.5f, cy, TR("БАСКЕТБОЛ - КОМАНДЫ", "BASKETBALL - COMMANDS"), 0xFFFFC864,
+           ui::TEXT_CENTER | ui::TEXT_SHADOW);
+    cy += th + 10 * s;
+    auto section = [&](const char* title) {
+        g.Text(ui::FONT_SMALL, x + pad, cy, title, 0xFF8CB4FF, ui::TEXT_SHADOW);
+        cy += lh + 8 * s;
+    };
+    auto rows = [&](const Row* list) {
+        for (size_t i = 0; i < 6; ++i) {
+            g.Text(ui::FONT_SMALL, x + pad, cy, list[i].key, 0xFFFFFFFF, ui::TEXT_SHADOW);
+            g.Text(ui::FONT_SMALL, x + pad + keyW + 24 * s, cy, list[i].what, 0xFFC8C8D2, ui::TEXT_SHADOW);
+            cy += lh;
+        }
+    };
+    section(TR("В чате", "In the chat"));
+    rows(chat);
+    section(TR("С мячом", "With the ball"));
+    rows(keys);
+    section(TR("Правила", "Rules"));
+    for (const char* r : rules) {
+        g.Text(ui::FONT_SMALL, x + pad, cy, r, 0xFFC8C8D2, ui::TEXT_SHADOW);
+        cy += lh;
+    }
+}
+
 void Render() {
     auto& g = ui::Gfx();
     float s = g.Scale();
@@ -1165,8 +1259,8 @@ void Render() {
         }
         if (g_m.playing && g_m.holder == Me() && g_me.move != Move::Shoot && g_me.move != Move::Dunk)
             g.Text(ui::FONT_SMALL, g.Width() * 0.5f, g.Height() - 40 * s,
-                   TR("Бег (Sprint): бросок - держите и отпустите в верхней точке прыжка  ·  с разбега у кольца - данк",
-                      "Sprint: shoot (hold, let go at the top of the jump)  ·  Sprint running at the rim: dunk"),
+                   TR("ЛКМ: бросок  ·  Пробел: бег  ·  ЛКМ на бегу у кольца: данк  ·  /basquete comandos: все команды",
+                      "Left mouse: shoot  ·  Space: run  ·  Left mouse running at the rim: dunk  ·  /basquete comandos: all commands"),
                    0xFFDCDCE6, ui::TEXT_CENTER | ui::TEXT_OUTLINE);
     }
     // the jump's meter: the top is the mark
@@ -1180,6 +1274,10 @@ void Render() {
         g.Rect(at(kPeak - 0.03f), by, at(kPeak + 0.03f) - at(kPeak - 0.03f), bh, ui::Argb(170, 80, 230, 110));
         g.Rect(bx, by + bh * 0.35f, at(part) - bx, bh * 0.3f, 0xFFFFFFFF);
         g.Rect(at(kPeak) - 1 * s, by - 4 * s, 2 * s, bh + 8 * s, 0xFFFFFFFF);
+        g.Text(ui::FONT_SMALL, g.Width() * 0.5f, by + bh + 8 * s,
+               g_me.held ? TR("Отпустите ЛКМ у отметки", "Let go of the left mouse button at the mark")
+                         : TR("Нажмите ЛКМ у отметки", "Press the left mouse button at the mark"),
+               0xFFDCDCE6, ui::TEXT_CENTER | ui::TEXT_OUTLINE);
     }
     if (g_me.timing >= 0 && now - g_me.timingMs < 1400) {
         static const uint32_t kc[3] = {0xFFFF6464, 0xFFFFD250, 0xFF50E66E};
@@ -1188,6 +1286,7 @@ void Render() {
     }
     if (now < g_banner.until && !g_banner.text.empty())
         g.Text(ui::FONT_BIG, g.Width() * 0.5f, g.Height() * 0.30f, g_banner.text, g_banner.colour, ui::TEXT_CENTER | ui::TEXT_OUTLINE);
+    if (now < g_helpUntil) RenderHelp();
 }
 
 class Basketball : public Module {
@@ -1218,7 +1317,7 @@ public:
     }
     void OnPostProcess() override { Tick(); }
     void OnRender() override {
-        if (g_m.on || g_me.timing >= 0 || NowMs() < g_banner.until) Render();
+        if (g_m.on || g_me.timing >= 0 || NowMs() < g_banner.until || NowMs() < g_helpUntil) Render();
     }
     bool OnCommand(const std::string& cmd, const std::vector<std::string>& args) override {
         if (cmd != "basquete" && cmd != "basketball" && cmd != "basket") return false;

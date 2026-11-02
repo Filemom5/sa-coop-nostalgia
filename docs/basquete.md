@@ -42,15 +42,16 @@ flowchart TD
 
 ## 3. Controles (padrão do GTA no PC)
 
-O arremesso é o do minigame original do GTA (o jogo mostra o mesmo texto: "segure Correr e solte no alto do pulo").
+`/basquete comandos` mostra esta lista num quadro no meio da tela (de novo para fechar).
 
 **Com a bola**
 
 | Ação | Tecla | O que acontece | Fase |
 |---|---|---|---|
-| Driblar andando ou correndo | W A S D (andar: a tecla de andar) | As animações de basquete do jogo andam e correm com o CJ, virado para onde o direcional aponta. A bola acompanha a mão | 1 |
-| Arremessar | Segurar **Espaço** (Correr) e soltar | O CJ pula. Uma barra mostra o ponto alto, e soltar nele dá mais chance | 1 |
-| Enterrar | **Espaço** correndo, de frente para o aro, a até 3,5 m | Pulo, voo até o aro, pendurado e queda, com as animações do jogo | 1 |
+| Driblar andando | W A S D | As animações de basquete do jogo andam com o CJ, virado para onde o direcional aponta. A bola acompanha a mão | 1 |
+| Driblar correndo | Segurar **Espaço** (Correr) | O mesmo, correndo | 1 |
+| Arremessar | **Botão esquerdo do mouse** | Aperte para pular e solte quando a barra chegar na marca. Ou dê um toque para pular e aperte de novo na marca. Na marca, mais chance | 1 |
+| Enterrar | **Botão esquerdo** correndo, de frente para o aro, a até 3,5 m | Pulo, voo até o aro, pendurado e queda, com as animações do jogo | 1 |
 | Passar (2x2 e 3x3) | Botão direito do mouse | Passa para o colega mais alinhado com a câmera | 3 |
 | Crossover (trocar de mão) | C | Muda de lado num tranco e escapa de roubo por cerca de 1 s | 2 |
 
@@ -60,7 +61,7 @@ O arremesso é o do minigame original do GTA (o jogo mostra o mesmo texto: "segu
 |---|---|---|---|
 | Pegar bola solta (rebote) | Encostar nela | Quem chega primeiro no juiz leva | 1 |
 | Postura de defesa | Segurar o botão direito | Passos laterais, de frente para o atacante | 2 |
-| Roubar | Botão esquerdo, até 1,2 m de quem está com a bola | Tem chance de roubar, menor se ele acabou de dar crossover | 2 |
+| Roubar | Botão esquerdo (sem a bola), até 1,2 m de quem está com a bola | Tem chance de roubar, menor se ele acabou de dar crossover | 2 |
 | Toco | Shift (pular), na frente de quem arremessa | Pulo de defesa. Se pegar o arremesso subindo, é toco e a bola fica solta | 2 |
 
 ## 4. Chance do arremesso
