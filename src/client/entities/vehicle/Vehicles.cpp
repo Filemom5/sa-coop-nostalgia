@@ -536,8 +536,40 @@ bool Vehicles::KeepsWhenDeleted(const NetVehicle& nv) const {
     if (!Net().IsHost() && HostMissionRecent(0)) return false;
     int type = v->VehicleSubClass();
     bool aircraft = type == VEHICLE_TYPE_HELI || type == VEHICLE_TYPE_PLANE || type == VEHICLE_TYPE_FHELI || type == VEHICLE_TYPE_FPLANE;
-    return !aircraft && type != VEHICLE_TYPE_TRAIN && v->AreaCode() == me->AreaCode() &&
-           (v->GetPosition() - me->GetPosition()).Length() < 80.0f;
+    CVector p = v->GetPosition();
+    if (aircraft || type == VEHICLE_TYPE_TRAIN || v->AreaCode() != me->AreaCode() || (p - me->GetPosition()).Length() >= 80.0f)
+        return false;
+    // One game keeps it: the one of the lowest id among the players by it (its owner's aside). Each of the others kept
+    // it: with four players three cars stood at its spot, each game's copy of the others' cleared its own away again
+    // (CREATE_CAR clears its spot: CTheScripts::ClearSpaceForMissionEntity), and the Bobcats of Angel Pine piled up till
+    // every game stood at 1 fps and crashed (01.11). A bit farther for the others: rather none than two.
+    for (const auto& [id, rp] : Players::Instance().All())
+        if (id != nv.owner && id < Net().MyId() && rp.hasState && rp.state.area == v->AreaCode() &&
+            NowMs() - rp.stateRecvMs < 3000 && (rp.state.pos - p).Length() < 90.0f)
+            return false;
+    // another car on its spot: a copy of one came there and cleared it away, or two games made one each there; once is
+    // enough
+    CPoolHeader* pool = VehiclePool();
+    for (int i = 0; pool && i < pool->size; ++i) {
+        if (pool->byteMap[i] < 0) continue;
+        auto* o = (CVehicle*)(pool->objects + (size_t)i * kVehiclePoolElemSize);
+        if (o != v && (o->GetPosition() - p).Length() < 3.0f) return false;
+    }
+    // a few a second, and not past what this game's traffic holds (CCarCtrl::NumRandomCars; it makes none from 45 on)
+    if (NowMs() - m_keepWindowMs < 1000 && m_keepsInWindow >= 3) return false;
+    return Ref<int32_t>(0x969094) < 40;
+}
+
+int Vehicles::MirrorTrafficNear(const CVector& at, float radius, int8_t area) const {
+    int n = 0;
+    for (const auto& [id, nv] : m_byId) {
+        CVehicle* v = nv.veh;
+        if (!IsMirror(nv) || nv.script || !Alive(nv) || v->AreaCode() != area || Aircraft(v) || v->IsTrain()) continue;
+        if (v->Driver() && Players::Instance().FindByPed(v->Driver())) continue;  // a player's car is no traffic
+        CVector d = v->GetPosition() - at;
+        if (d.x * d.x + d.y * d.y < radius * radius) ++n;
+    }
+    return n;
 }
 
 void Vehicles::HandleRemove(uint8_t from, Reader& r) {
@@ -558,6 +590,9 @@ void Vehicles::HandleRemove(uint8_t from, Reader& r) {
         }
     }
     if (KeepsWhenDeleted(*nv)) {
+        uint64_t now = NowMs();
+        if (now - m_keepWindowMs >= 1000) m_keepWindowMs = now, m_keepsInWindow = 0;
+        ++m_keepsInWindow;
         LOGI("Vehicle %04X (model %d): its owner deleted it by us: kept", id, nv->model);
         return TakeOver(*nv, from);
     }

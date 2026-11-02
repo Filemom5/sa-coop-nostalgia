@@ -1,5 +1,16 @@
 ## Novo nesta versão
 
+- **Fim da chuva de carros:** quando um jogo apagava um carro perto de vocês, cada um dos outros jogos ficava com uma
+  cópia dele, todas no mesmo lugar. Com 4 jogadores isso virava uma pilha (a torre de Bobcats em Angel Pine), carros
+  explodindo do nada, 1 FPS e crash. Agora só um jogo fica com o carro, e nunca se já houver outro carro naquele lugar.
+- **Carros e pessoas divididos entre os jogos:** onde vários jogadores estão juntos, só um jogo cria o trânsito e as
+  pessoas (antes isso só valia perto do host). Separados, cada jogo cria perto do seu jogador, mas conta os carros e as
+  pessoas dos outros jogos como se fossem seus. A rua fica com a quantidade normal de um jogo só, não 4 vezes mais.
+- **Um carro extra na missão, não um por jogador:** quando não há lugar no carro do host, só um parceiro ganha um veículo
+  igual, e os outros entram de carona nele. Outro veículo só aparece se não couber mais ninguém.
+
+## Da versão 1.17.0
+
 - **Até 6 jogadores:** o servidor agora aceita 6 jogadores (eram 4). Quem cria o servidor pelo F9 já abre com 6 vagas,
   mesmo que o `server.ini` antigo diga 4. Ainda em teste: se algo estranhar com 5 ou 6, avisem.
 

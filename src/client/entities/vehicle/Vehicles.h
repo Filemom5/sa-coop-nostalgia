@@ -95,6 +95,9 @@ public:
     // The host's mission cleared an area: the other players' empty cars there go from this game at once (their copies
     // are mission cars here, CLEAR_AREA left them). Returns their ids for the owners (G_VEH_CLEAR).
     std::vector<uint16_t> ClearMirrors(const game::CVector& at, float radius);
+    // the other games' ordinary cars within `radius` of `at` (their traffic and parked cars here: Population counts them
+    // as this game's own, so that where players meet the street holds one game's traffic, not one per game)
+    int MirrorTrafficNear(const game::CVector& at, float radius, int8_t area) const;
 
 private:
     void Announce(const NetVehicle& nv);
@@ -133,6 +136,8 @@ private:
     int m_lastDriven = -1, m_kept = -1;  // handles: the car the local player last drove, and it kept while inside
     uint8_t m_keptBy = 0;               // what it was created by before
     int8_t m_lastArea = 0;
+    uint64_t m_keepWindowMs = 0;  // cars kept as their owners deleted them: a few a second at most
+    int m_keepsInWindow = 0;
 };
 
 // Vehicles that are synchronised at all (trains are left to each game). An RC toy is its player's game's car with

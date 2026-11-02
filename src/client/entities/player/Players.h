@@ -128,6 +128,10 @@ private:
     void SendVehicleState(game::CVehicle* v);
     void DetectCarTasks();
     void FollowHost();
+    // no seat for us in the host's vehicle `hv`: one in another partner's vehicle (true: seated), or that partner gets
+    // the one for us all first (true: wait for it)
+    bool SeatWithPartner(game::CVehicle* hv, const game::CVector& hostPos);
+    bool PartnerGetsOne(game::CVehicle* hv, const game::CVector& hostPos);
     void HoldForPassengerSeat();
     void GroupRides(game::CPlayerPed* me);
     void YieldClaimedSeat(game::CPlayerPed* me);
@@ -158,6 +162,8 @@ private:
     bool m_exitReported = false;
     uint64_t m_followAt = 0;
     int m_bikeFor = -1;  // the host's vehicle (no seat left in it) the partner got one for, by handle: a later car in its slot is another
+    int m_waitFor = -1;  // the host's vehicle for which another partner gets the one for us all: since then
+    uint64_t m_waitSince = 0;
     int m_lastCar = -1;
     int8_t m_knockOffSaved = -1;
     uint64_t m_enterHeldSince = 0;  // the enter button (triangle) held on foot since

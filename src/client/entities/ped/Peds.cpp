@@ -1416,6 +1416,16 @@ void Peds::DropMirrorsOf(uint8_t id, bool keep) {
     }
 }
 
+int Peds::MirrorsNear(const CVector& at, float radius, int8_t area) const {
+    int n = 0;
+    for (const auto& [id, np] : m_byId) {
+        if (np.owner == Net().MyId() || !IsAlive(np) || IsPedDead(np.ped) || AreaOf(np.ped) != area) continue;
+        CVector d = np.ped->GetPosition() - at;
+        if (d.x * d.x + d.y * d.y < radius * radius) ++n;
+    }
+    return n;
+}
+
 bool Peds::SeatClaimed(CVehicle* v, int seat) {
     NetVehicle* nv = Vehicles::Instance().Find(v);
     if (!nv) return false;

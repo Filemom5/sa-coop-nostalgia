@@ -1,12 +1,14 @@
 // Population control for co-op:
-//  * near the host only the host generates random peds, traffic and parked cars (the partner sees the
-//    host's population through Peds/Vehicles sync), unless the partner is wanted (police chases);
+//  * where players stand together one game generates random peds, traffic and parked cars (the host's first, see
+//    Generator), the others see its population through Peds/Vehicles sync, unless their player is wanted (police
+//    chases); elsewhere each game counts the other games' people and cars about its player as its own;
 //  * entities owned by this game are not removed while the other player is close to them
 //    (CPopulation::ManagePed / CCarCtrl::PossiblyRemoveVehicle measure distance to the nearest player);
 //  * farther from this game's player, an ordinary ped or car the other player is nearer to goes to the other game
 //    instead of being dropped here (it vanished in front of the other player).
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "features/population/Population.h"
 #include "common/api/protocol/Protocol.h"
@@ -46,20 +48,56 @@ int LocalWantedLevel() {
     return wanted ? Field<int32_t>(wanted, 0x2C) : 0;
 }
 
+// Whose people and cars cover the players standing together: one game's per group. First the source's: the host's,
+// and while a joint side activity runs, its leader's (a taxi job's fares, a pimp's clients and a vigilante's targets
+// are the leading game's own people and cars: led by the partner near the host, the job had none, #2). Then the others'
+// by id: a game whose player is within kShareRadius of one that makes them leaves it to that one. With two players only
+// the host's made them; with four, two away from the host made theirs both, on the same road nodes, and their cars
+// stood on top of each other (01.11). The player whose game makes them for ours, or our id.
+uint8_t Generator() {
+    struct Spot {
+        uint8_t id;
+        CVector pos;
+        int8_t area;
+    };
+    uint8_t mine = Net().MyId();
+    uint8_t source = SideLeading() ? mine : SideLeader() != 0xFF ? SideLeader() : Net().HostId();
+    CPlayerPed* me = FindPlayerPed(0);
+    std::vector<Spot> order;
+    auto add = [&](uint8_t id) {
+        if (id == mine) return order.push_back({mine, me->GetPosition(), (int8_t)me->AreaCode()});
+        const RemotePlayer* rp = Players::Instance().Get(id);
+        if (rp && rp->hasState && NowMs() - rp->stateRecvMs < 1500) order.push_back({id, rp->state.pos, rp->state.area});
+    };
+    add(source);
+    bool meAdded = source == mine;
+    for (const auto& [id, rp] : Players::Instance().All()) {  // by id
+        if (!meAdded && mine < id) add(mine), meAdded = true;
+        if (id != source) add(id);
+    }
+    if (!meAdded) add(mine);
+    std::vector<const Spot*> makers;
+    for (const Spot& s : order) {
+        const Spot* by = nullptr;
+        for (const Spot* m : makers) {
+            float limit = (s.id == mine || m->id == mine) && g_suppress ? kShareRadiusOff : kShareRadius;
+            if (m->area == s.area && (m->pos - s.pos).Length2D() < limit) {
+                by = m;
+                break;
+            }
+        }
+        if (s.id == mine) return by ? by->id : mine;
+        if (!by) makers.push_back(&s);
+    }
+    return mine;
+}
+
 void UpdateSuppression() {
     bool want = false;
-    // whose people and cars cover two players together: the host's, and while a joint side activity runs, its leader's.
-    // A taxi job's fares, a pimp's clients and a vigilante's targets are the leading game's own people and cars: led by
-    // the partner near the host, the job had none (#2)
-    uint8_t source = SideLeading() ? Net().MyId() : SideLeader() != 0xFF ? SideLeader() : Net().HostId();
-    if (Net().Online() && source != Net().MyId() && core::IsPlayerReady()) {
-        CPlayerPed* me = FindPlayerPed(0);
-        if (const RemotePlayer* src = Players::Instance().Get(source); src && src->hasState) {
-            float d = (src->state.pos - me->GetPosition()).Length2D();
-            bool sameArea = src->state.area == me->AreaCode();
-            float limit = g_suppress ? kShareRadiusOff : kShareRadius;
-            want = sameArea && d < limit && LocalWantedLevel() == 0;
-        }
+    uint8_t source = Net().MyId();
+    if (Net().Online() && core::IsPlayerReady()) {
+        source = Generator();
+        want = source != Net().MyId() && LocalWantedLevel() == 0;
     }
     if (Net().Online() && core::IsPlayerReady()) {
         CPlayerPed* me = FindPlayerPed(0);
@@ -87,11 +125,44 @@ using UpdatePopFn = void(__cdecl*)(bool);
 UpdatePopFn g_origPopUpdate = nullptr;
 void __cdecl HookPopulationUpdate(bool generate) { g_origPopUpdate(generate && !g_suppress); }
 
+// How far the other games' people and cars count as ours (about where this game makes and keeps its own)
+constexpr float kPedShare = 70.0f, kCarShare = 150.0f;
+
+// The other games' people and cars about our player count as our own while this game decides whether it makes more:
+// their copies here are mission ones, which the population's counts leave out, so each game made its full share
+// beside them and four players had four times the traffic, the pools full and 1 fps (01.11). Now the street holds about
+// one game's share wherever players are, split among the games that make them.
+int SharedCars() {
+    if (!Net().Online() || !core::IsPlayerReady()) return 0;
+    CPlayerPed* me = FindPlayerPed(0);
+    return Vehicles::Instance().MirrorTrafficNear(me->GetPosition(), kCarShare, (int8_t)me->AreaCode());
+}
+int SharedPeds() {
+    if (!Net().Online() || !core::IsPlayerReady()) return 0;
+    CPlayerPed* me = FindPlayerPed(0);
+    return Peds::Instance().MirrorsNear(me->GetPosition(), kPedShare, (int8_t)me->AreaCode());
+}
+
 using VoidFn = void(__cdecl*)();
 VoidFn g_origGenerateRandomCars = nullptr;
 void __cdecl HookGenerateRandomCars() {
     if (g_suppress) return;
+    int shared = SharedCars();
+    int32_t& cars = Ref<int32_t>(0x969094);  // CCarCtrl::NumRandomCars: GenerateOneRandomCar makes one while it is short
+    cars += shared;
     g_origGenerateRandomCars();
+    cars -= shared;
+}
+
+using AddToPopulationFn = bool(__cdecl*)(float, float, float, float);
+AddToPopulationFn g_origAddToPopulation = nullptr;
+bool __cdecl HookAddToPopulation(float minDist, float maxDist, float minOffView, float maxOffView) {
+    int shared = SharedPeds();
+    int32_t& peds = Ref<int32_t>(0xC0EC28);  // CPopulation::ms_nTotalPeds (summed by CPopulation::Update just before)
+    peds += shared;
+    bool made = g_origAddToPopulation(minDist, maxDist, minOffView, maxOffView);
+    peds -= shared;
+    return made;
 }
 
 VoidFn g_origCarGenerators = nullptr;
@@ -342,6 +413,8 @@ public:
         mem::RedirectCallFn(0x59690F, &HookSetupPeds, &g_origSetupPeds);                // InteriorGroup_c::Update
         mem::RedirectCallFn(0x4407B7, &HookRemoveAllRandomPeds, &g_origRemoveAllRandom);  // CEntryExit::TransitionFinished
         mem::RedirectCallFn(0x616837, &HookAttractorPeds, &g_origAttractorPeds);          // CPopulation::Update
+        // CPopulation::AddToPopulation in CPopulation::Update and GeneratePedsAtStartOfGame (the countdowns' fill)
+        for (uintptr_t at : {0x61679B, 0x615D4B}) mem::RedirectCallFn(at, &HookAddToPopulation, &g_origAddToPopulation);
         // CPedPlacement::IsPositionClearForPed in AddToPopulation where "not clear" gives up (its other two calls use
         // the entities it lists, or go on when it says no), CCarCtrl::GenerateCarCreationCoors2 in GenerateOneRandomCar
         for (uintptr_t at : {0x614C8F, 0x6151FA}) mem::RedirectCallFn(at, &HookClearForPed, &g_origClearForPed);

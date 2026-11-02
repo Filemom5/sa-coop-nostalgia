@@ -2063,6 +2063,13 @@ void Players::FollowHost() {
     // within reach of the host: a partner the mission left farther comes by its moves (CS_FOLLOW) or /tp first
     if ((!flow::IsFollower() && !HostMissionRecent(20000)) || (hpos - mpos).Length() > 150.0f || me->AreaCode() != 0) return;
     m_followAt = NowMs();  // a try every second until the model is in and there is room
+    // One vehicle for the partners with no seat, not one each: with four players three more cars came at every mission
+    // start (01.11). A seat in another partner's first; of those with none, the lowest id gets it.
+    if (SeatWithPartner(hv, hpos)) {
+        m_bikeFor = GetVehicleRef(hv);
+        return;
+    }
+    if (PartnerGetsOne(hv, hpos)) return;
     int car = VehicleBeside(model);
     static int noRoomFor = -1;
     if (car == -2 && noRoomFor != GetVehicleRef(hv))
@@ -2077,6 +2084,39 @@ void Players::FollowHost() {
                                                      : TR("Рядом с вами машина. Садитесь и езжайте за хостом.",
                                                           "There is a vehicle next to you. Get in and follow the host."));
     LOGI("The host is in a vehicle with no seat for us (model %d): one for the partner too", model);
+}
+
+bool Players::SeatWithPartner(CVehicle* hv, const CVector& hpos) {
+    CPlayerPed* me = FindPlayerPed(0);
+    for (auto& [id, rp] : m_remote) {
+        CPed* p = rp.ped;
+        CVehicle* pv = p && p->InVehicle() ? p->Vehicle() : nullptr;
+        if (id == Net().HostId() || !pv || pv == hv || pv->Driver() != p || (p->GetPosition() - hpos).Length() > 150.0f)
+            continue;
+        int type = pv->VehicleSubClass();
+        if (type != VEHICLE_TYPE_AUTOMOBILE && type != VEHICLE_TYPE_MTRUCK && type != VEHICLE_TYPE_QUAD && !pv->IsBike()) continue;
+        for (int i = 0; i < pv->MaxPassengers() && i < 8; ++i)
+            if (!pv->Passengers()[i] && !Peds::Instance().SeatClaimed(pv, i)) {
+                Cmd(0x0430).I(GetPedRef(me)).I(GetVehicleRef(pv)).I(i).Run();  // WARP_CHAR_INTO_CAR_AS_PASSENGER
+                ui::TheChat().AddSystem(Format(TR("Нет места в машине хоста: вы в машине игрока %s.",
+                                                  "No seat in the host's vehicle: you ride with %s."),
+                                               Net().PeerName(id).c_str()));
+                LOGI("No seat for us in the host's vehicle: in player %d's (model %d, seat %d)", id, pv->ModelIndex(), i);
+                return true;
+            }
+    }
+    return false;
+}
+
+bool Players::PartnerGetsOne(CVehicle* hv, const CVector& hpos) {
+    int ref = GetVehicleRef(hv);
+    if (m_waitFor != ref) m_waitFor = ref, m_waitSince = NowMs();
+    if (NowMs() - m_waitSince > 6000) return false;  // it got none (no room by it, the model loading): ours then
+    for (auto& [id, rp] : m_remote)
+        if (id != Net().HostId() && id < Net().MyId() && rp.ped && !rp.ped->InVehicle() && rp.hasState && rp.state.area == 0 &&
+            NowMs() - rp.stateRecvMs < 1500 && (rp.ped->GetPosition() - hpos).Length() < 150.0f)
+            return true;
+    return false;
 }
 
 // the point over rp's head the name tag hangs from (back buffer coordinates) and its fade with distance

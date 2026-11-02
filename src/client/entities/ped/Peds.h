@@ -128,6 +128,9 @@ public:
     // driver's), while the copy here is not there yet: Ryder sat beside the host there, his copy still walked here, and
     // our player took his seat ("Ryder sank into the ground")
     bool SeatClaimed(game::CVehicle* v, int seat);
+    // the other games' people within `radius` of `at`, alive (Population counts them as this game's own: one game's
+    // passers-by where players meet, not one per game)
+    int MirrorsNear(const game::CVector& at, float radius, int8_t area) const;
 
 private:
     void ScanOwned();
