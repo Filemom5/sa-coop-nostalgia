@@ -1,5 +1,14 @@
 ## Novo nesta versão
 
+- **Jaquetas em HD:** as jaquetas do grupo agora usam uma textura de 1024×1024 no lugar da de 256×256 (16 vezes mais
+  pixels). A logo do Nostalgia ficou nítida, com as letras legíveis, e um pouco maior no peito, do tamanho das jaquetas
+  de verdade.
+- **Jaqueta nova, a Sunset Nostalgia:** fica no lugar da Beige Hooded Jacket da Victim e já está no guarda-roupa de todo
+  mundo. Tem degradê do azul-escuro ao vermelho, a logo no peito, "NOSTALGIA" na manga e, nas costas, um pôr do sol
+  synthwave com palmeiras.
+
+## Da versão 1.18.2
+
 - **Fim do quadrado vermelho no mapa:** uma marcação de missão que bugou nos primeiros testes ficou presa no save, e o
   GPS levava todo mundo para lá ao entrar num carro. Agora, quando o jogo carrega, ele apaga as marcações de missão que
   sobraram (as das entregas do caminhão também). Depois de carregar, salve o jogo uma vez para ela sair do save.
