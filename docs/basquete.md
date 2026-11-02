@@ -42,38 +42,42 @@ flowchart TD
 
 ## 3. Controles (padrão do GTA no PC)
 
+O arremesso é o do minigame original do GTA (o jogo mostra o mesmo texto: "segure Correr e solte no alto do pulo").
+
 **Com a bola**
 
-| Ação | Tecla | O que acontece |
-|---|---|---|
-| Driblar andando ou correndo | W A S D e Espaço | O drible é automático, com as animações de basquete do jogo e a bola acompanhando a mão |
-| Arremessar | Segurar o botão esquerdo do mouse e soltar | O CJ pula. Uma barra de tempo aparece, e soltar no ponto alto dá mais chance |
-| Enterrar | Botão esquerdo correndo, até 2,5 m do aro | Enterrada com as animações do jogo: pulo, voo e pendurado no aro |
-| Passar (2x2 e 3x3) | Botão direito do mouse | Passa para o colega mais alinhado com a câmera |
-| Crossover (trocar de mão) | C | Muda de lado num tranco e escapa de roubo por cerca de 1 s |
+| Ação | Tecla | O que acontece | Fase |
+|---|---|---|---|
+| Driblar andando ou correndo | W A S D (andar: a tecla de andar) | As animações de basquete do jogo andam e correm com o CJ, virado para onde o direcional aponta. A bola acompanha a mão | 1 |
+| Arremessar | Segurar **Espaço** (Correr) e soltar | O CJ pula. Uma barra mostra o ponto alto, e soltar nele dá mais chance | 1 |
+| Enterrar | **Espaço** correndo, de frente para o aro, a até 3,5 m | Pulo, voo até o aro, pendurado e queda, com as animações do jogo | 1 |
+| Passar (2x2 e 3x3) | Botão direito do mouse | Passa para o colega mais alinhado com a câmera | 3 |
+| Crossover (trocar de mão) | C | Muda de lado num tranco e escapa de roubo por cerca de 1 s | 2 |
 
 **Sem a bola**
 
-| Ação | Tecla | O que acontece |
-|---|---|---|
-| Postura de defesa | Segurar o botão direito | Passos laterais, de frente para o atacante |
-| Roubar | Botão esquerdo, até 1,2 m de quem está com a bola | Tem chance de roubar, menor se ele acabou de dar crossover |
-| Toco | Shift (pular), na frente de quem arremessa | Pulo de defesa. Se pegar o arremesso subindo, é toco e a bola fica solta |
-| Pegar bola solta | Encostar nela | Pega a bola, e quem chega primeiro no juiz leva |
+| Ação | Tecla | O que acontece | Fase |
+|---|---|---|---|
+| Pegar bola solta (rebote) | Encostar nela | Quem chega primeiro no juiz leva | 1 |
+| Postura de defesa | Segurar o botão direito | Passos laterais, de frente para o atacante | 2 |
+| Roubar | Botão esquerdo, até 1,2 m de quem está com a bola | Tem chance de roubar, menor se ele acabou de dar crossover | 2 |
+| Toco | Shift (pular), na frente de quem arremessa | Pulo de defesa. Se pegar o arremesso subindo, é toco e a bola fica solta | 2 |
 
 ## 4. Chance do arremesso
 
-A chance começa pela **distância**: perto do aro 75%, meia distância 55% e de 3 pontos 38%.
+A chance começa pela **distância** até o aro: até 2,5 m é 75%, cai até 55% aos 6 m, e de 3 pontos começa em 40% e perde
+4% por metro.
 
-Depois ela muda com o **tempo** da soltura:
+Depois ela muda com o **tempo** da soltura. O ponto alto é 40% da animação do pulo (0,67 s), como no original:
 
-- **Perfeito:** +20%
-- **Bom:** igual
-- **Cedo ou tarde:** −35%
+- **Perfeito** (até 0,03 do ponto): +20%
+- **Bom** (até 0,07): igual
+- **Ruim:** −35%
+- **Sem soltar:** −45% (a bola sai sozinha um pouco depois do ponto alto)
 
-A **marcação** também tira chance: um defensor a até 1,5 m, entre você e a cesta, tira 25%.
+A **marcação** (fase 2) vai tirar 25% quando um defensor estiver a até 1,5 m, entre você e a cesta.
 
-A **enterrada** cai 95% das vezes, e só um toco na hora do salto impede.
+A **enterrada** sempre cai. Na fase 2, um toco na hora do salto vai poder impedir.
 
 O jogo de quem arremessa sorteia o resultado e manda para todos a trajetória: subida, aro, rede ou rebote. Todos os
 jogos tocam a mesma trajetória, a partir de uma semente compartilhada.
@@ -119,7 +123,7 @@ Cada fase sai numa versão e é testada antes da próxima.
 
 | Fase | O que entra | Pronto quando |
 |---|---|---|
-| **1. Base** | `/basquete treino` (sozinho) e 1x1 com convite; achar a cesta; drible animado com a bola; arremesso com barra; 2 e 3 pontos; enterrada; rebote; limpar a bola; placar na tela; fim em 11 | Dá para jogar 1x1 do começo ao fim, e os dois veem a mesma bola e o mesmo placar |
+| **1. Base** (feita na 1.20.0) | `/basquete treino` (sozinho) e 1x1 com convite (já aceita times de até 3); achar a cesta; drible animado com a bola; arremesso com barra; 2 e 3 pontos; enterrada; rebote; limpar a bola; bola fora; placar na tela; fim em 11 | Dá para jogar 1x1 do começo ao fim, e os dois veem a mesma bola e o mesmo placar |
 | **2. Defesa** | Postura de defesa, roubo, toco, crossover, marcação baixando a chance | Roubo e toco funcionam e aparecem para os dois |
 | **3. Times** | 2x2 e 3x3, passe, nomes na cor do time, estatísticas no fim | Partida 2x2 completa com passes |
 | **4. Extras** | Sons (rede, aro, torcida), posse de 24 s opcional, ranking guardado entre partidas, comemoração do vencedor | O grupo pede o que fizer falta |
@@ -127,5 +131,15 @@ Cada fase sai numa versão e é testada antes da próxima.
 ## 9. Como testar
 
 - **Sozinho:** `/basquete treino` numa cesta, como a da Grove Street. Testa drible, arremesso, enterrada e rebote.
+  Também funciona sem servidor.
 - **Em 2:** `/basquete`, o amigo aceita com Y. Conferir se o placar e a bola são iguais nas duas telas.
-- **Logs:** o `coop.log` ganha linhas `Basketball: ...` (início, cesta, posse, fim) para eu ver o que aconteceu.
+- **Logs:** o `coop.log` ganha linhas `Basketball: ...` (a cesta achada com o aro e o chão, cada arremesso com a
+  distância e a soltura, a enterrada, o fim) para eu ver o que aconteceu.
+
+## 10. Código
+
+- `src/client/features/basketball/Basketball.cpp`: convite, juiz, drible, arremesso, enterrada, bola e tela.
+- `src/client/features/basketball/BallPath.cpp`: a chance e a trajetória da bola (pura, igual em todos os jogos).
+  Teste: `tools/basketball/path_test.cpp` (3.000 arremessos: a cesta passa no aro, nada atravessa o chão, o rebote fica
+  na quadra).
+- Mensagem de rede: `G_BASKET` (178) em `src/common/api/protocol/Protocol.h`.

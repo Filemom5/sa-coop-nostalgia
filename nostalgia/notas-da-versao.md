@@ -1,5 +1,17 @@
 ## Novo nesta versão
 
+- **Basquete (primeira parte):** perto de qualquer cesta do mapa, digite **/basquete** no chat. Quem está perto recebe o
+  convite e aceita com **Y**. Os times são azul e vermelho, e ganha quem chegar a 11 (ou a outro número: `/basquete 21`).
+  - Com a bola, o CJ dribla com as animações de basquete do próprio jogo.
+  - **Arremesso:** segure **Espaço** e solte no alto do pulo, como no minigame original. A barra mostra o ponto certo.
+  - **Enterrada:** aperte **Espaço** correndo de frente para o aro.
+  - De dentro do arco vale 2 pontos e de fora vale 3. Rebote é de quem chegar primeiro na bola.
+  - Depois de cesta ou rebote da defesa, o time precisa levar a bola para fora do arco antes de arremessar.
+  - **Treino sozinho:** `/basquete treino`. Para sair: `/basquete sair`.
+  - Ainda não tem passe, roubo nem toco. Isso vem nas próximas partes.
+
+## Da versão 1.19.0
+
 - **Jaquetas em HD:** as jaquetas do grupo agora usam uma textura de 1024×1024 no lugar da de 256×256 (16 vezes mais
   pixels). A logo do Nostalgia ficou nítida, com as letras legíveis, e um pouco maior no peito, do tamanho das jaquetas
   de verdade.

@@ -229,6 +229,12 @@ enum MsgId : uint8_t {
                               // partner's own look: u8 n, n x (u8 key index 0..27 of CPedClothesDesc, u32 key); 0: off
     G_OBJ_HOLD = 163,         // reliable: the partner holds the copy of a host's mission object: u8 op (1 hold, 2 release,
                               // 3 enter pressed, 4 deny: host -> partner), u16 object, release: vec3 pos, quat rot
+    G_BASKET = 178,           // reliable: basketball at a hoop (Basketball.cpp, docs/basquete.md): u8 op, u32 game; 1 invite
+                              // (court: rim vec3, forward x y, floor z; u8 points to win), 2 answer (u8 yes), 3 start (court,
+                              // u8 points, u8 n x {u8 player, u8 team}, u8 holder), 4 state (judge -> all: u16 seq, u16
+                              // shots seen, u8 score x 2, u8 holder, u8 bits: must clear 1 blue 2 red, 4 over; u8 event,
+                              // u8 who, u8 value), 5 shot (u16 no, u8 shooter, vec3 from, u8 bits: 1 in 2 dunk, u32 seed,
+                              // u8 points), 6 claim a loose ball (u16 shot), 7 leave, 8 end (u8 score x 2)
 
     G_PING = 197,             // a quick mark (Ping.cpp): u8 op (1 mark, 2 take away: reliable; 3 move: the state channel, the
                               // car or person of the sender's mark is there now), u8 kind (0 place, 1 car, 2 person, 3
