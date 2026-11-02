@@ -1,5 +1,11 @@
 ## Novo nesta versão
 
+- **Fim do quadrado vermelho no mapa:** uma marcação de missão que bugou nos primeiros testes ficou presa no save, e o
+  GPS levava todo mundo para lá ao entrar num carro. Agora, quando o jogo carrega, ele apaga as marcações de missão que
+  sobraram (as das entregas do caminhão também). Depois de carregar, salve o jogo uma vez para ela sair do save.
+
+## Da versão 1.18.1
+
 - **Entrar de novo só com código:** o "entrar sem código" da 1.18.0 saiu. Ele mandava o código do servidor (que leva o
   IP de quem cria) para um canal público na internet, e como o código do mod é aberto, qualquer um podia achar. Voltou
   a ser como antes: quem cria o servidor passa o código para os amigos.

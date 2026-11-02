@@ -2964,38 +2964,19 @@ void HandleBlip(uint8_t from, Reader& r) {
     }
 }
 
-// TRUCK's drops (its 102@, 103@). A blip it left at one (see ScriptCommand) went into the saves and the host's world for
-// the partners: a loaded world with no mission running loses it (a sprite-less coordinate blip of TRUCK's scale 4 there).
-const float kTruckDrops[][2] = {
-    {-187.4f, -277.0f}, {58.0f, -256.7f}, {95.9f, -154.4f}, {809.8f, -598.0f}, {1403.8f, 399.4f}, {1338.3f, 348.9f},
-    {1449.7f, 2358.9f}, {1037.5f, 2131.3f}, {988.0f, 2080.4f}, {1288.7f, 1195.2f}, {2467.9f, 1950.1f},
-    {2792.7f, 2578.3f}, {2271.5f, 2791.7f}, {2596.5f, 1738.6f}, {2818.8f, 912.5f}, {2706.5f, 827.3f}, {1627.7f, 688.4f},
-    {1504.5f, 981.1f}, {1724.0f, 1590.1f}, {1727.8f, 2338.0f}, {2413.7f, -2113.7f}, {2785.0f, -2455.4f},
-    {2112.7f, -2070.4f}, {1763.6f, -2070.4f}, {-1888.6f, -1711.8f}, {-2117.2f, -2380.5f}, {-1545.4f, -2747.0f},
-    {-1407.4f, 2646.0f}, {-2245.6f, 2371.7f}, {-1360.6f, 2068.1f}, {274.3f, 1382.8f}, {628.9f, 1714.9f},
-    {635.0f, 1213.8f}, {-915.0f, 2012.1f}, {385.8f, 2595.6f}, {-1557.0f, -441.3f}, {-2659.6f, 1380.6f},
-    {-1650.9f, 437.6f}, {-1745.1f, 37.9f}, {56.7f, -268.4f}, {100.4f, -155.1f}, {815.0f, -605.1f}, {1401.1f, 398.8f},
-    {1343.1f, 345.7f}, {-189.2f, -273.0f}, {1042.2f, 2130.5f}, {983.1f, 2076.4f}, {2469.6f, 1949.5f},
-    {2807.8f, 2609.9f}, {2248.7f, 2775.1f}, {2603.2f, 1730.5f}, {2710.4f, 850.1f}, {1588.9f, 715.3f},
-    {1446.3f, 1000.5f}, {1713.8f, 2329.1f}, {1450.8f, 2360.7f}, {2759.0f, -2446.0f}, {2104.0f, -2089.0f},
-    {1751.0f, -2067.0f}, {2412.0f, -2106.0f}, {-2001.0f, -2388.1f}, {-1560.7f, -2728.4f}, {-1835.0f, -1647.7f},
-    {-1945.9f, 2377.9f}, {-1471.5f, 1864.8f}, {-1286.7f, 2695.9f}, {613.8f, 1692.4f}, {620.4f, 1249.3f},
-    {-533.2f, 1995.9f}, {325.1f, 2543.3f}, {246.6f, 1435.2f}, {-2629.1f, 1387.4f}, {-1530.8f, 487.2f},
-    {-1745.1f, 27.8f}, {-1549.9f, -434.9f}};
-void ClearTruckLeftovers() {
+// A mission's destination left in the saves when its mission ended badly (TRUCK's drops, see ScriptCommand; a red square
+// from the server's first tests): the GPS took every driver there. A loaded world has no mission running, so a
+// sprite-less coordinate blip on its radar is one of those: gone (the game's own blips there all have a sprite).
+void ClearLeftoverBlips() {
     if (FindMissionScript()) return;
     for (int i = 0; i < kNumTraces; ++i) {
         uintptr_t t = Trace(i);
-        if (!(Ref<uint8_t>(t + 0x25) & 2) || ((Ref<uint8_t>(t + 0x26) >> 2) & 0xF) != BLIP_COORD || Ref<uint8_t>(t + 0x24) ||
-            Ref<uint16_t>(t + 0x1C) != 4)
-            continue;  // in use, coordinates, no sprite, TRUCK's CHANGE_BLIP_SCALE 4
+        uint8_t bits = Ref<uint8_t>(t + 0x26);
+        if (!(Ref<uint8_t>(t + 0x25) & 2) || ((bits >> 2) & 0xF) != BLIP_COORD || Ref<uint8_t>(t + 0x24) || !(bits & 2))
+            continue;  // in use, coordinates, no sprite, on the radar
         const CVector& p = Ref<CVector>(t + 0x08);
-        for (const auto& d : kTruckDrops)
-            if (std::fabs(p.x - d[0]) < 1.0f && std::fabs(p.y - d[1]) < 1.0f) {
-                LOGI("A trucking drop's blip left in the loaded world at %.0f,%.0f: removed", p.x, p.y);
-                Call<0x587C10>(i);  // CRadar::ClearActualBlip
-                break;
-            }
+        LOGI("A mission's blip left in the loaded world at %.0f,%.0f: removed", p.x, p.y);
+        Call<0x587C10>(i);  // CRadar::ClearActualBlip
     }
 }
 
@@ -4125,7 +4106,7 @@ public:
         g_inheritedFlagMs = core::IsOnMission() ? NowMs() : 0;
         g_lastPassed.assign((const char*)0xB78A00, strnlen((const char*)0xB78A00, 8));  // what the loaded game had
         g_progressAt = 0;
-        ClearTruckLeftovers();
+        ClearLeftoverBlips();
         jobs::WorldLoaded();
         g_burglaryDressed = false;  // the loaded world brings its own look
         jobs::Update("", "");  // the loaded world shut its burglary houses: opened again if a joint burglary goes on
