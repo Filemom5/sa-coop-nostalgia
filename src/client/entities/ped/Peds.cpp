@@ -43,6 +43,15 @@ struct Reg {
 // vehicle occupants use the vehicle ranges so traffic is never seen without its driver
 float SyncIn(CPed* p) { return p->InVehicle() ? 170.0f : 120.0f; }
 float SyncOut(CPed* p) { return p->InVehicle() ? 220.0f : 150.0f; }
+
+// A copy of another game's passer-by waits till our player (or our camera) comes near: with players apart, each game
+// held every other game's street as well (as the cars' copies, Vehicles). A mission's person is made wherever it is.
+constexpr float kMirrorNear = 160.0f, kMirrorFar = 230.0f;
+bool FarFromUs(const CVector& p, float limit) {
+    CPlayerPed* me = FindPlayerPed(0);
+    // 3D: an interior lies high above the map
+    return me && (p - me->GetPosition()).Length() > limit && (p - cam::Source()).Length() > limit;
+}
 constexpr int kSpecialFirst = 290, kSpecialLast = 299;
 constexpr int kEmptyDecisionMaker = 65542;  // SET_CHAR_DECISION_MAKER template "Empty"
 constexpr int TASK_ENTER_CAR_AS_PASSENGER = 700, TASK_ENTER_CAR_AS_DRIVER = 701, TASK_LEAVE_CAR = 704;
@@ -724,6 +733,7 @@ CPed* Peds::SpawnMirror(NetPed& np) {
         return nullptr;
     }
     bool missionPed = np.pedType >= 24 /* PED_TYPE_MISSION1.. */ || (np.model >= kSpecialFirst && np.model <= kSpecialLast);
+    if (!missionPed && !(st.flags & PedSyncState::F_IN_VEHICLE) && FarFromUs(st.pos, kMirrorNear)) return nullptr;  // waits
     if (!IsModelLoaded(model)) {
         // streamed in the background, the spawn is retried (a blocking load per ped stalls the frame). A request with no
         // flag lasts one CStreaming::Update (its PurgeRequestList): the model of a mission's person this game has nowhere
@@ -994,6 +1004,16 @@ void Peds::ApplyMirror(NetPed& np) {
     if (!IsAlive(np)) {  // deleted by the game (should not happen to mission peds): spawn again
         m_byPtr.erase(ped);
         np.ped = nullptr;
+        return;
+    }
+    // gone far from our player on foot: the copy goes and waits till ours comes near again (SpawnMirror)
+    bool missionPed = np.pedType >= 24 || (np.model >= kSpecialFirst && np.model <= kSpecialLast);
+    if (!missionPed && !np.deadApplied && !(st.flags & PedSyncState::F_IN_VEHICLE) && !ped->InVehicle() &&
+        FarFromUs(ped->GetPosition(), kMirrorFar)) {
+        Cmd(0x009B).I(np.handle).Run();  // DELETE_CHAR
+        m_byPtr.erase(ped);
+        np.ped = nullptr;
+        np.handle = -1;
         return;
     }
     ped->AreaCode() = st.area;

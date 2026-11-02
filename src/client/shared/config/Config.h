@@ -18,6 +18,7 @@ struct ClientConfig {
     int loadSlot = 0;         // host: save slot (1..8) to load automatically, -1 a new game, 0 = choose in the menu
     bool friendlyFire = false;  // host: the players can hurt each other
     bool partnerTeleport = true;  // host: the partners may use /tp and /tphere
+    std::string lobbyGroup = "nostalgia";  // the group whose open servers F9 lists (Lobby.cpp); empty: none
 
     // [game]
     bool windowed = false;
@@ -38,6 +39,7 @@ struct ClientConfig {
     bool partnerArrow = true;         // ...drawn as an arrow turned with their heading, as the game draws its player
     bool nameTags = true;             // their names, health and armour over their heads (off for a blind shoot-out)
     bool gps = true;                  // the road route to the map target on the radar while driving
+    bool fpsCounter = false;          // the frame rate and the ping in the top right corner (Ctrl+F, PerfHud.cpp)
 
     // [voice]
     bool voiceEnabled = true;

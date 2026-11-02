@@ -1,5 +1,18 @@
 ## Novo nesta versão
 
+- **FPS e ping na tela (Ctrl+F):** como no League of Legends, **Ctrl+F** mostra e esconde o FPS e o ping no canto
+  superior direito. O jogo lembra a escolha.
+- **Entrar sem código:** quem cria o servidor avisa o grupo sozinho. Na aba "Join a game" do F9 aparece
+  "Servidor de Fulano" com o número de jogadores e um botão **Join**: um clique e pronto, sem copiar código. Se o
+  servidor fechar, some da lista em até 11 minutos.
+- **Menos peso com o grupo espalhado:** carros e pessoas dos outros jogadores que estão longe de você (mais de 300 m
+  para carros, 160 m para pessoas) só aparecem no seu jogo quando você chega perto. Antes, cada jogo carregava a rua de
+  todo mundo, mesmo do outro lado do mapa.
+- **Menos internet:** carros longe de todos os outros jogadores mandam a posição menos vezes por segundo (as pessoas
+  já faziam isso).
+
+## Da versão 1.17.1
+
 - **Fim da chuva de carros:** quando um jogo apagava um carro perto de vocês, cada um dos outros jogos ficava com uma
   cópia dele, todas no mesmo lugar. Com 4 jogadores isso virava uma pilha (a torre de Bobcats em Angel Pine), carros
   explodindo do nada, 1 FPS e crash. Agora só um jogo fica com o carro, e nunca se já houver outro carro naquele lugar.

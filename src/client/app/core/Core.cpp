@@ -16,6 +16,7 @@
 #include "entities/session/Flow.h"
 #include "features/roof/Roof.h"
 #include "features/radio/Headphones.h"
+#include "features/perf-hud/PerfHud.h"
 #include "features/ping/Ping.h"
 #include "features/weapon-wheel/WeaponWheel.h"
 #include "features/story/contest/Contest.h"
@@ -321,6 +322,8 @@ void WriteDefaultConfig(const std::wstring& path) {
         "friendly_fire = 0\r\n"
         "; Для хоста: поставьте 0, чтобы напарники не могли перемещаться командами /tp и /tphere. Это галочка в окне F9.\r\n"
         "partner_teleport = 1\r\n"
+        "; Группа друзей: окно F9 показывает её открытые серверы, хост сообщает о своём (пусто - выключено).\r\n"
+        "group = nostalgia\r\n"
         "\r\n"
         "[game]\r\n"
         "; Поставьте 1, чтобы играть в окне.\r\n"
@@ -330,6 +333,8 @@ void WriteDefaultConfig(const std::wstring& path) {
         "; Меню паузы не останавливает мир, чтобы напарник мог играть дальше.\r\n"
         "no_pause_menu = 1\r\n"
         "skip_intro = 1\r\n"
+        "; Частота кадров и пинг в правом верхнем углу (Ctrl+F)\r\n"
+        "fps_counter = 0\r\n"
         "\r\n"
         "[voice]\r\n"
         "enabled = 1\r\n"
@@ -447,6 +452,10 @@ bool OnKeyDown(int vk, bool repeat) {
     }
     if (ui::TheChat().IsOpen()) return true;
     if (repeat) return false;
+    if (vk == 'F' && (GetKeyState(VK_CONTROL) & 0x8000)) {  // Ctrl+F: the frame rate and the ping, as in League of Legends
+        perfhud::Toggle();
+        return true;  // F does not reach the game: CJ does not get into a car
+    }
     if (vk != cfg.headphonesKey) headphones::OtherKey();  // a cheat being typed is no tap on the headphones' key
     if (vk == VK_ESCAPE && CutsceneSkipDecline()) return true;  // "watch on", not the pause menu
     if ((vk == 'Y' || vk == 'N') && !game::MenuActive() && (contest::Key(vk) || teleport::Key(vk == 'Y') || SideCallKey(vk == 'Y')))

@@ -45,6 +45,7 @@ bool ClientConfig::Load(const std::wstring& coopDirectory) {
     loadSlot = ini.GetInt("connect", "load_slot", 0);
     friendlyFire = ini.GetBool("connect", "friendly_fire", friendlyFire);
     partnerTeleport = ini.GetBool("connect", "partner_teleport", partnerTeleport);
+    lobbyGroup = Trim(ini.Get("connect", "group", lobbyGroup));
 
     windowed = ini.GetBool("game", "windowed", windowed);
     windowedStrict = ini.GetBool("game", "windowed_strict", windowedStrict);
@@ -65,6 +66,7 @@ bool ClientConfig::Load(const std::wstring& coopDirectory) {
     partnerArrow = ini.GetBool("game", "partner_arrow", partnerArrow);
     nameTags = ini.GetBool("game", "name_tags", nameTags);
     gps = ini.GetBool("game", "gps", gps);
+    fpsCounter = ini.GetBool("game", "fps_counter", fpsCounter);
 
     voiceEnabled = ini.GetBool("voice", "enabled", voiceEnabled);
     voiceKey = ini.GetInt("voice", "push_to_talk_key", voiceKey);

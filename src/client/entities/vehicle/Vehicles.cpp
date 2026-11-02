@@ -61,6 +61,21 @@ bool HasPlayerInside(CVehicle* v) {
     return false;
 }
 
+// A copy of another game's car waits till our player (or our camera) comes near: the others' streets across the map
+// cost this game nothing meanwhile. With players apart, each game held every other game's traffic as well, and its
+// pool, memory and frame paid for it. Not a script's car or one a player sits in: those are made wherever they are.
+constexpr float kMirrorNear = 300.0f, kMirrorFar = 400.0f;
+bool FarFromUs(const CVector& p, float limit) {
+    CPlayerPed* me = FindPlayerPed(0);
+    // 3D: an interior lies high above the map
+    return me && (p - me->GetPosition()).Length() > limit && (p - cam::Source()).Length() > limit;
+}
+bool RemotePlayerIn(uint16_t netId) {
+    for (const auto& [id, rp] : Players::Instance().All())
+        if (rp.mode != RemotePlayer::Mode::OnFoot && rp.vehNetId == netId) return true;
+    return false;
+}
+
 void SetVehicleMatrix(CVehicle* v, const CVector& pos, const Quat& q) {
     CMatrix* m = v->Matrix();
     if (!m) return;
@@ -213,6 +228,23 @@ void Vehicles::Announce(const NetVehicle& nv) {
     Writer w(proto::G_VEH_CREATE);
     sp.Write(w);
     Net().Send(proto::CH_RELIABLE, w);
+}
+
+VehicleSpawn Vehicles::SpawnOf(const NetVehicle& nv) {
+    CVehicle* v = nv.veh;
+    VehicleSpawn sp;
+    sp.netId = nv.netId;
+    sp.model = nv.model;
+    sp.owner = nv.owner;
+    sp.pos = v->GetPosition();
+    if (CMatrix* m = v->Matrix()) sp.rot = Quat::FromMatrix(*m);
+    memcpy(sp.colors, v->Colors(), 4);
+    sp.health = v->Health();
+    sp.area = v->AreaCode();
+    sp.lockState = (uint8_t)v->DoorLock();
+    sp.script = nv.script;
+    sp.extras[0] = Field<int8_t>(v, 0x438), sp.extras[1] = Field<int8_t>(v, 0x439);
+    return sp;
 }
 
 void Vehicles::Reannounce() {
@@ -403,6 +435,7 @@ void Vehicles::HandleCreate(uint8_t from, Reader& r) {
 
 bool Vehicles::CreateMirror(const VehicleSpawn& sp) {
     if (Find(sp.netId)) return true;  // announced again meanwhile and made already
+    if (!sp.script && FarFromUs(sp.pos, kMirrorNear) && !RemotePlayerIn(sp.netId)) return false;  // waits (FarFromUs)
     bool adopted = false;
     CVehicle* v = FindAdoptable(sp.model, sp.pos);
     if (v) {
@@ -691,7 +724,15 @@ void Vehicles::HandleSync(uint8_t from, Reader& r) {
 
 void Vehicles::ApplyDriverState(uint8_t from, uint16_t netId, const VehicleState& st) {
     NetVehicle* nv = Find(netId);
-    if (!nv || nv->owner != from) return;
+    if (!nv) {  // a copy waiting for our player to come near: made where the car is by then
+        if (auto it = m_pending.find(netId); it != m_pending.end() && it->second.owner == from) {
+            it->second.pos = st.pos;
+            it->second.rot = st.rot;
+            it->second.health = st.health;
+        }
+        return;
+    }
+    if (nv->owner != from) return;
     if (nv->hasState && (int32_t)(st.time - nv->lastTime) < 0) return;
     if ((st.flags ^ (nv->hasState ? nv->state.flags : 0)) & VehicleState::F_HORN)
         LOGD("Vehicle %04X: horn %s", netId, (st.flags & VehicleState::F_HORN) ? "on" : "off");
@@ -708,7 +749,10 @@ void Vehicles::HandleOwner(uint8_t from, Reader& r) {
     uint8_t owner = r.U8();
     if (!r.Ok()) return;
     NetVehicle* nv = Find(id);
-    if (!nv) return;
+    if (!nv) {  // a copy still waiting: the states it waits on come from its new owner
+        if (auto it = m_pending.find(id); it != m_pending.end()) it->second.owner = owner;
+        return;
+    }
     CPlayerPed* me = FindPlayerPed(0);
     bool iDrive = me && nv->veh && me->InVehicle() && me->Vehicle() == nv->veh && nv->veh->Driver() == me;
     if (iDrive && owner != Net().MyId()) {
@@ -991,6 +1035,19 @@ void Vehicles::ScanTraffic() {
             SetVehicleCreatedBy(nv->veh, VEHICLE_CREATED_RANDOM);
         Forget(id, false);
     }
+    // copies far from our player go till it comes near again (CreateMirror), waiting where they were
+    std::vector<uint16_t> far;
+    for (auto& [id, nv] : m_byId) {
+        CVehicle* v = nv.veh;
+        if (IsMirror(nv) && nv.createdByUs && !nv.script && Alive(nv) && !HasPlayerInside(v) && !RemotePlayerIn(id) &&
+            !Field<CVehicle*>(v, 0x4C4) && !Field<CVehicle*>(v, 0x4C8) && FarFromUs(v->GetPosition(), kMirrorFar))
+            far.push_back(id);
+    }
+    for (uint16_t id : far) {
+        m_pending[id] = SpawnOf(m_byId[id]);
+        Forget(id, true);
+    }
+    if (!far.empty()) LOGD("%zu car copies far from us wait till we come near", far.size());
     for (auto it = m_local.begin(); it != m_local.end();) it = GetVehicle(*it) ? std::next(it) : m_local.erase(it);
     for (int i = 0; i < pool->size; ++i) {
         if (pool->byteMap[i] < 0) continue;
@@ -1102,6 +1159,12 @@ void Vehicles::OnPostProcess() {
         bool active = now - nv.lastChangeMs < 3000;
         bool towed = Field<CVehicle*>(nv.veh, 0x4C4) != nullptr;  // CVehicle::m_pTowingVehicle
         uint64_t interval = towed ? 50 : active ? 100 : 2000;
+        // far from every other player its copy needs fewer states (as the people's, Peds): the traffic around six
+        // players apart sent ten a second each to all
+        if (active && !towed && now - nv.lastSendMs >= interval) {
+            float d = RemoteDistance(nv.veh->GetPosition(), nv.veh->AreaCode());
+            interval = d < 60.0f ? 100 : d < 120.0f ? 160 : 250;
+        }
         if (now - nv.lastSendMs >= interval) {
             nv.lastSendMs = now;
             SendState(nv);

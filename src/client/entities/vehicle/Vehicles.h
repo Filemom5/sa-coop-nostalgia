@@ -98,9 +98,11 @@ public:
     // the other games' ordinary cars within `radius` of `at` (their traffic and parked cars here: Population counts them
     // as this game's own, so that where players meet the street holds one game's traffic, not one per game)
     int MirrorTrafficNear(const game::CVector& at, float radius, int8_t area) const;
+    size_t Waiting() const { return m_pending.size(); }  // copies not made yet: far from our player, or their model loading
 
 private:
     void Announce(const NetVehicle& nv);
+    VehicleSpawn SpawnOf(const NetVehicle& nv);  // what makes its copy again as it is now
     bool CreateMirror(const VehicleSpawn& sp);
     void ScanTraffic();
     void HandleCreate(uint8_t from, Reader& r);
