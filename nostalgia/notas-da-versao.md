@@ -1,5 +1,12 @@
 ## Novo nesta versão
 
+- **Basquete sem crash:** o jogo fechava logo depois do `/basquete`. A bola recebia a animação antes de o jogo terminar
+  de criá-la, e agora ela espera o modelo aparecer. O drible também não trava mais na primeira animação.
+- **Cesta mais fácil de achar:** o `/basquete` agora funciona a até 25 m da cesta. Mais longe que isso, o chat diz a
+  distância para você chegar perto.
+
+## Da versão 1.20.0
+
 - **Basquete (primeira parte):** perto de qualquer cesta do mapa, digite **/basquete** no chat. Quem está perto recebe o
   convite e aceita com **Y**. Os times são azul e vermelho, e ganha quem chegar a 11 (ou a outro número: `/basquete 21`).
   - Com a bola, o CJ dribla com as animações de basquete do próprio jogo.

@@ -48,7 +48,8 @@ enum : uint8_t { OP_INVITE = 1, OP_ANSWER = 2, OP_START = 3, OP_STATE = 4, OP_SH
 enum : uint8_t { EV_NONE = 0, EV_START = 1, EV_SCORE = 2, EV_NOCLEAR = 3, EV_OUT = 4, EV_REBOUND = 5, EV_MISS = 6 };
 constexpr uint8_t kNobody = 0xFF;
 
-constexpr float kHoopReach = 15.0f;    // /basquete this near a hoop
+constexpr float kHoopReach = 25.0f;    // /basquete this near a hoop
+constexpr float kHoopSeen = 120.0f;    // one farther: "come closer"
 constexpr float kInviteReach = 30.0f;  // who is asked: this near its rim
 constexpr float kWatchReach = 80.0f;   // the ball and the score are shown this near
 constexpr float kOut = 12.0f;          // the holder this far from the rim (flat): out
@@ -100,7 +101,7 @@ bool ResolveAnims() {
 // the strongest basketball animation a ped plays and its time (seconds), else -1
 int PedAnim(CPed* ped, float& t) {
     int best = -1;
-    float amount = 0.0f;
+    float amount = -1.0f;  // one just blending in (amount 0) counts
     t = 0.0f;
     if (!ped || !g_animsReady) return -1;
     for (void* a = anim::First(ped->RwObject()); a; a = anim::Next(a)) {
@@ -237,14 +238,15 @@ Court ReadCourt(Reader& r) {
 
 // ---------------------------------------------------------------- the hoops
 // the nearest hoop to p within reach: its court (the rim, the court's way, the floor)
-bool FindCourt(const V3& p, Court& out) {
+bool FindCourt(const V3& p, Court& out, float& far) {
+    far = 0.0f;
     static std::vector<int> models;
     if (models.empty())
         for (const char* n : kHoops)
             if (int id = ModelId(n); id > 0) models.push_back(id);
     CPoolHeader* pool = ObjectPool();
     CObject* best = nullptr;
-    float bestD = kHoopReach;
+    float bestD = kHoopSeen;
     for (int i = 0; pool && i < pool->size; ++i) {
         if (pool->byteMap[i] < 0) continue;
         auto* o = (CObject*)(pool->objects + (size_t)i * kObjectPoolElemSize);
@@ -253,6 +255,10 @@ bool FindCourt(const V3& p, Court& out) {
         if (d < bestD) bestD = d, best = o;
     }
     if (!best) return false;
+    if (bestD > kHoopReach) {
+        far = bestD;
+        return false;
+    }
     int h = GetObjectRef(best);
     float x = 0, y = 0, z = 0;
     Cmd(0x080A).I(h).I(0).Out(&x).Out(&y).Out(&z).Run();  // GET_LEVEL_DESIGN_COORDS_FOR_OBJECT
@@ -306,6 +312,16 @@ void BallDelete() {
     if (g_ball.handle) Cmd(0x0108).I(g_ball.handle).Run();  // DELETE_OBJECT
     g_ball = {};
 }
+// A script's object gets its model (RwObject) from the streaming a frame or so after CREATE_OBJECT (CObject::Create
+// with no RwObject), and loses it again out of its draw distance: an animation command on it before or after read the
+// clump's plugin data from null (RpAnimBlendClumpGetAssociation, 0x4D687F: the crash of the first /basquete, 02.11).
+// BBALL waits a frame (WAIT 0) between the two. Ours: the clump is there, a clump.
+bool HasClump(int handle) {
+    CObject* o = handle ? GetObject(handle) : nullptr;
+    auto* rw = o ? (const uint8_t*)o->RwObject() : nullptr;
+    return rw && rw[0] == 2;  // rpCLUMP
+}
+
 bool BallMake(const V3& at) {
     if (g_ball.handle && GetObject(g_ball.handle)) return true;
     g_ball = {};
@@ -323,6 +339,7 @@ void BallHeld(CPed* ped) {
     int pedRef = GetPedRef(ped);
     if (g_ball.handle && g_ball.on != pedRef) BallDelete();  // a fresh one: the last one's pose is in its frames
     if (!BallMake(ToV3(ped->GetPosition()))) return;
+    if (!HasClump(g_ball.handle)) return;  // its model comes next frame
     if (g_ball.on != pedRef) {
         Cmd(0x069B).I(g_ball.handle).I(pedRef).F(0.0f).F(0.5f).F(-1.0f).F(0.0f).F(0.0f).F(0.0f).Run();  // ATTACH_OBJECT_TO_CHAR, as BBALL
         g_ball.on = pedRef;
@@ -372,7 +389,10 @@ struct Mine {
 int CjRef() { return GetPedRef(FindPlayerPed(0)); }
 
 // TASK_PLAY_ANIM_NON_INTERRUPTABLE with BBALL's arguments for each
+// the task starts on the next frame and its animation blends in after: asked again only when it has had the time
+uint64_t g_playMs = 0;
 void Play(int a, float blend, bool loop, bool lock, bool keep) {
+    g_playMs = NowMs();
     Cmd(0x0812).I(CjRef()).S(g_anims[a].name).S(kBlock).F(blend).I(loop).I(lock).I(lock).I(keep).I(-1).Run();
 }
 bool Playing(int a, float* part = nullptr) {
@@ -551,7 +571,8 @@ void UpdateMine() {
     case Move::Dunk:
         return UpdateDunk();
     case Move::Pickup:
-        if (!Playing(A_PICKUP) || NowMs() - g_me.sinceMs > 1900) Play(A_IDLELOOP, 4.0f, true, false, false), g_me.move = Move::Idle;
+        if ((NowMs() - g_me.sinceMs > 400 && !Playing(A_PICKUP)) || NowMs() - g_me.sinceMs > 1900)
+            Play(A_IDLELOOP, 4.0f, true, false, false), g_me.move = Move::Idle;
         return;
     case Move::Stop:
         if (NowMs() - g_me.sinceMs < 250) return;
@@ -570,7 +591,8 @@ void UpdateMine() {
     if (pressed) return g_me.move == Move::Run && DunkOk() ? StartDunk() : StartShot();
     if (mag > 0.3f) {
         Move want = run ? Move::Run : Move::Walk;
-        if (g_me.move != want) {
+        // again when it did not take (the task replaced, CJ knocked over)
+        if (g_me.move != want || (NowMs() - g_playMs > 600 && !Playing(run ? A_RUN : A_WALK))) {
             Play(run ? A_RUN : A_WALK, 8.0f, true, true, false);
             g_me.move = want;
         }
@@ -594,7 +616,7 @@ void UpdateMine() {
         g_me.sinceMs = NowMs();
         return;
     }
-    if (g_me.move == Move::Idle && !Playing(A_IDLELOOP)) Play(A_IDLELOOP, 4.0f, true, false, false);
+    if (g_me.move == Move::Idle && NowMs() - g_playMs > 600 && !Playing(A_IDLELOOP)) Play(A_IDLELOOP, 4.0f, true, false, false);
 }
 
 // ---------------------------------------------------------------- the judge
@@ -1019,8 +1041,11 @@ bool Command(const std::vector<std::string>& args) {
         return true;
     }
     Court c;
-    if (me->AreaCode() != 0 || !FindCourt(ToV3(me->GetPosition()), c)) {
-        ui::TheChat().AddError(TR("Рядом нет баскетбольного кольца.", "There is no basketball hoop near you."));
+    float far = 0.0f;
+    if (me->AreaCode() != 0 || !FindCourt(ToV3(me->GetPosition()), c, far)) {
+        if (far > 0.0f)
+            ui::TheChat().AddError(Format(TR("Подойдите ближе к кольцу (до него %.0f м).", "Come closer to the hoop (it is %.0f m away)."), far));
+        else ui::TheChat().AddError(TR("Рядом нет баскетбольного кольца.", "There is no basketball hoop near you."));
         return true;
     }
     if (a == "treino" || a == "practice" || !Net().Online()) {
