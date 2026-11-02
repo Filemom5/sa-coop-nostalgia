@@ -9,7 +9,6 @@
 #include "common/lib/util/Util.h"
 #include "entities/player/Players.h"
 #include "entities/session/Flow.h"
-#include "features/lobby/Lobby.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
 #include "shared/game/Game.h"
@@ -304,25 +303,6 @@ void RenderConnectMenu() {
             }
         }
         cy += rowH + 14 * s;
-        if (g_tab == 0) {  // the group's open servers (Lobby.cpp): one click, no code to type
-            std::vector<lobby::Server> open = lobby::OpenServers();
-            if (open.size() > 2) open.resize(2);
-            for (size_t i = 0; i < open.size(); ++i) {
-                const lobby::Server& sv = open[i];
-                g.Rect(cx, cy, cw, rowH, 0xFF090C10);
-                g.Text(FONT_NORMAL, cx + 12 * s, cy + (rowH - lh) * 0.5f, Format(TR("Сервер %s", "%s's server"), sv.name.c_str()),
-                       kText, TEXT_SHADOW);
-                g.Text(FONT_SMALL, cx + cw * 0.55f, cy + (rowH - sh) * 0.5f,
-                       Format(TR("игроков: %d из %d", "%d of %d players"), sv.players, sv.max), kSaMuted, TEXT_SHADOW);
-                const char* join = TR("Войти", "Join");
-                if (item(i ? "lobby1" : "lobby0", cx + cw - g.TextWidth(FONT_MENU, join) - 12 * s, cy, join) && ApplyNick()) {
-                    g_addr = Widen(sv.code);
-                    flow::Join(sv.code, PortValue(), Narrow(g_password));
-                }
-                cy += rowH + 4 * s;
-            }
-            if (!open.empty()) cy += 6 * s;
-        }
 
         caption(cx, TR("Порт", "Port"));
         caption(cx + 170 * s, TR("Пароль", "Password"));

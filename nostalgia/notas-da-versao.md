@@ -1,5 +1,11 @@
 ## Novo nesta versão
 
+- **Entrar de novo só com código:** o "entrar sem código" da 1.18.0 saiu. Ele mandava o código do servidor (que leva o
+  IP de quem cria) para um canal público na internet, e como o código do mod é aberto, qualquer um podia achar. Voltou
+  a ser como antes: quem cria o servidor passa o código para os amigos.
+
+## Da versão 1.18.0
+
 - **FPS e ping na tela (Ctrl+F):** como no League of Legends, **Ctrl+F** mostra e esconde o FPS e o ping no canto
   superior direito. O jogo lembra a escolha.
 - **Entrar sem código:** quem cria o servidor avisa o grupo sozinho. Na aba "Join a game" do F9 aparece
