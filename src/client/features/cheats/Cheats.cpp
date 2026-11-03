@@ -105,6 +105,25 @@ public:
         });
     }
 
+    // The save menu warns "one or more cheats have been activated" by CCheat::m_bHasPlayerCheated, which only a cheat
+    // typed sets (CPad::AddToPCCheatString; ours from the others go by CCheat::ApplyCheat, which does not) and which every
+    // save keeps from then on (CSimpleVariablesSaveStructure): a cheat typed once, by anyone in that world's past, and the
+    // warning came at every save after it (02.11). It goes at the load; one typed in this game brings it back.
+    void OnGameStarted() override {
+        uint8_t& cheated = Ref<uint8_t>(0x96918C);
+        if (!cheated) return;
+        int times = 0;
+        Cmd(0x0652).I(137).Out(&times).Run();  // GET_INT_STAT: STAT_TIMES_CHEATED
+        cheated = 0;
+        LOGI("The loaded game carried the cheat warning (cheats typed in it: %d): cleared", times);
+        static bool told = false;
+        if (!told)
+            ui::TheChat().AddSystem(Format(TR("В сохранении была отметка о читах (введено читов: %d). Она снята: без новых читов предупреждения не будет.",
+                                              "The save carried the cheat warning (cheats typed in it: %d). It is gone: no new cheat, no warning."),
+                                           times));
+        told = true;
+    }
+
     static Cheats& Instance() {
         static Cheats m;
         return m;

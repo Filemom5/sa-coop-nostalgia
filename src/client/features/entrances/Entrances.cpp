@@ -47,7 +47,8 @@ void KeepWayOut(CPoolHeader* pool) {
     int8_t area = FindPlayerPed(0)->AreaCode();
     if (area == 0) return;
     for (int i = 0; i < pool->size; ++i)
-        if (pool->byteMap[i] >= 0 && Ref<int8_t>(Entry(pool, i) + 0x32) == area) *Flags(pool, i) |= 0x4000;  // m_nArea, ENABLE_ACCESS
+        if (pool->byteMap[i] >= 0 && Ref<int8_t>(Entry(pool, i) + 0x32) == area && !IsPrivateDoor(Entry(pool, i)))
+            *Flags(pool, i) |= 0x4000;  // m_nArea, ENABLE_ACCESS (not in a house of the group: Home shuts those)
 }
 
 class Entrances : public Module {

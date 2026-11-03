@@ -1,5 +1,13 @@
 ## Novo nesta versão
 
+- **Casa só sua:** a porta amarela do próprio jogo dentro do interior fica fechada enquanto você está na sua casa (ou
+  visitando a de um amigo). Antes, sair por ela levava para a casa original em outro lugar do mapa. A saída é a seta.
+- **Sem aviso de cheat ao salvar:** o aviso vinha guardado no save desde algum cheat digitado no passado daquele mundo.
+  Agora ele some ao carregar o jogo. Só volta se alguém digitar um cheat de novo nessa partida.
+- O carro da casa não some mais quando você entra na casa.
+
+## Da versão 1.22.0
+
 - **Casas dos jogadores:** cada um marca a própria casa em qualquer porta do mapa com **`/casa marcar`**.
   - A casinha azul na porta leva para um interior de casa do próprio jogo. Cada casa tem o seu, então ninguém se encontra
     lá dentro. A seta lá dentro leva de volta.

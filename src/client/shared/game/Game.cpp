@@ -136,6 +136,18 @@ void* StreetDoorOf(int area, const CVector& inside, const CVector& hint) {
     return best;
 }
 
+namespace {
+int g_privateArea = 0;
+CVector g_privateAt;
+}  // namespace
+void SetPrivateInterior(int area, const CVector& at) { g_privateArea = area, g_privateAt = at; }
+bool IsPrivateDoor(uintptr_t e) {
+    if (!g_privateArea || Ref<int8_t>(e + 0x32) != g_privateArea) return false;  // m_nArea
+    const float* r = &Ref<float>(e + 0x08);                                       // m_recEntrance
+    float dx = (r[0] + r[2]) * 0.5f - g_privateAt.x, dy = (r[1] + r[3]) * 0.5f - g_privateAt.y;
+    return dx * dx + dy * dy < 40.0f * 40.0f;
+}
+
 void LightArea(int area, const CVector& pos) {
     int sky = 0;
     float best = 150.0f * 150.0f;

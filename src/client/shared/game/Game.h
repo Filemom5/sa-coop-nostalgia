@@ -498,6 +498,10 @@ void SetEntityPosition(CEntity* e, const CVector& pos);
 // The light of an interior, as going through its door sets it (CEntryExit::TransitionFinished: the timecycle's extra
 // colour of the interior's own entrance nearest to pos), or none outside. For players moved there by our code.
 void LightArea(int area, const CVector& pos);
+// The interior a house of the group put our player in (Home): the game's own doors in there lead to that interior's real
+// street door elsewhere in the map, and stay shut while we are in it (Entrances leaves them so). Area 0: none.
+void SetPrivateInterior(int area, const CVector& at);
+bool IsPrivateDoor(uintptr_t enex);  // a CEntryExit of the enex pool
 // The street door into interior `area` whose inside door is in the same building as `inside` (one area holds many: all
 // the Bincos), the one nearest `hint` (where the player came from): a CEntryExit, or null. Going through it sets it on
 // the ped (CPed::m_pEnex: the radar centres on it, a death inside comes back by the hospital nearest it, the interior

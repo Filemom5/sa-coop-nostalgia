@@ -153,6 +153,27 @@ struct Inside {
     int exitIcon = 0;
     bool armed = false;
 } g_in;
+// The game's own doors of that interior lead to its real street door, another house of the map (02.11: out of the
+// player's house through the yellow marker, in another part of the city): shut while we are in there.
+constexpr uintptr_t kEnexPool = 0x96A7D8;  // CEntryExitManager::mp_poolEntryExits, CEntryExit 0x3C bytes, +0x30 m_nFlags
+std::vector<int> g_shut;                   // the pool slots we shut (ENABLE_ACCESS taken off)
+void ShutDoors() {
+    auto* pool = Ref<CPoolHeader*>(kEnexPool);
+    for (int i = 0; pool && i < pool->size; ++i) {
+        uintptr_t e = (uintptr_t)pool->objects + (uintptr_t)i * 0x3C;
+        uint16_t& f = Ref<uint16_t>(e + 0x30);
+        if (pool->byteMap[i] < 0 || !IsPrivateDoor(e) || !(f & 0x4000)) continue;
+        f &= (uint16_t)~0x4000;
+        if (std::find(g_shut.begin(), g_shut.end(), i) == g_shut.end()) g_shut.push_back(i), LOGD("Homes: the game's door %.8s shut", (const char*)e);
+    }
+}
+void OpenDoors() {
+    auto* pool = Ref<CPoolHeader*>(kEnexPool);
+    for (int i : g_shut)
+        if (pool && i < pool->size && pool->byteMap[i] >= 0) Ref<uint16_t>((uintptr_t)pool->objects + (uintptr_t)i * 0x3C + 0x30) |= 0x4000;
+    g_shut.clear();
+    SetPrivateInterior(0, CVector());
+}
 // a trip through a door, to a house or home: the fade, then the move
 struct Trip {
     int stage = 0;
@@ -428,9 +449,12 @@ void UpdateTrip() {
     Cmd(0x0373).Run();                                      // SET_CAMERA_BEHIND_PLAYER
     DropIcon(g_in.exitIcon);
     g_in = Inside{};
+    OpenDoors();
     if (g_trip.intoHouse) {
         g_in.on = true;
         g_in.house = g_trip.house;
+        SetPrivateInterior(g_trip.area, ToCV(p));
+        ShutDoors();
         LOGI("Homes: into %s (area %d)", InteriorName(g_trip.house.interior).c_str(), g_trip.area);
     }
     // the door and the disk we stand at wait till we stepped away
@@ -507,7 +531,7 @@ void UpdateCars() {
     lastMs = NowMs();
     g_carsOut.resize(g_own.cars.size());
     CPlayerPed* me = FindPlayerPed(0);
-    V3 mp = CjPos();
+    V3 mp = g_in.on ? g_in.house.door : CjPos();  // in a house (its interior far off in the map): at its door
     for (size_t i = 0; i < g_own.cars.size(); ++i) {
         Car& c = g_own.cars[i];
         CarOut& o = g_carsOut[i];
@@ -630,11 +654,13 @@ void UpdateDoors() {
         const Interior& in = kInteriors[g_in.house.interior];
         V3 at{in.x, in.y, in.z};
         if (area != in.area || Dist(p, at) > 60.0f || me->Health() <= 0.0f) {
-            // gone another way (died, a teleport, the game's own door): no longer in there
+            // gone another way (died, a teleport): no longer in there
             DropIcon(g_in.exitIcon);
             g_in = Inside{};
+            OpenDoors();
             return;
         }
+        ShutDoors();  // the host's state of them may have opened one again
         if (!g_in.exitIcon) g_in.exitIcon = MakeIcon(kModelArrow, {at.x, at.y, at.z - 0.2f}, in.area);
         Spin(g_in.exitIcon);
         float d = Dist(p, at);
@@ -1060,6 +1086,8 @@ public:
     }
     void OnGameShutdown() override {
         // the world goes with what we made in it: no commands now
+        g_shut.clear();
+        SetPrivateInterior(0, CVector());
         g_ownIcons.clear();
         g_otherIcons.clear();
         g_carsOut.clear();
