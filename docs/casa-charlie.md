@@ -6,17 +6,24 @@ dá para entrar e sair andando, sem teleporte.
 ## Como fica no jogo
 
 - **Lugar:** Santa Maria Beach, no lugar do bloco de casas `santahouse04_law2` (o prédio laranja e o bege de 3
-  andares, em 265,97, -1757,58) e de parte do bloco do lado leste, `santahouse02_law2`, que vira areia. O lado oeste
-  encosta no vizinho, a frente fica onde era a do bloco antigo e o resto avança para a praia. Palmeiras, arbustos e a
-  boia do mapa que ficariam dentro da casa somem.
+  andares, em 265,97, -1757,58) e das duas casas do bloco do lado leste (`santahouse02_law2`) que ficam a oeste da casa
+  de salvar da praia. Esse bloco é o do jogo, cortado em x = 308 quando carrega (o modelo, o LOD e a colisão:
+  `Cut.cpp`); a casa de salvar (a porta em 315,7, -1769,8) fica como é. O lado oeste encosta no vizinho e a frente fica
+  onde era a do bloco antigo. Palmeiras, arbustos e a boia do mapa que ficariam dentro da casa somem.
+- **O terreno, como as casas de Malibu:** a casa e o quintal ficam num terreno elevado, com o piso a 5,3 m (1,7 m acima
+  da rua e 2,1 m acima da areia), calçado de pedra. Para o mar, um muro de madeira (bulkhead) com cerca branca e escadas
+  de madeira até a areia. A parte da casa que avança sobre a praia fica sobre estacas de madeira. Para a rua e os
+  vizinhos, um muro de reboco com capa de terracota. Os carros entram por um portão verde no alto de uma rampa que sobe
+  da rua (no lado oeste, até a garagem). A escada do deck chega na areia.
 - **Tamanho:** 1,6x o do modelo, porque as pessoas e as portas do jogo são maiores que as de verdade: as portas ficam
   com 3,2 m, como as portas grandes do próprio jogo, e a casa com 58,7 x 35,4 m.
 - **Modelo:** o `model.dae` (SketchUp, em metros), virado com o deck e as portas de vidro para o mar e a porta da frente
-  para a rua. O piso fica a 3,85 m, acima da areia e da calçada, e a base desce para dentro da areia. As folhas das
-  portas saem, então os vãos ficam abertos e dá para entrar andando. O portão da garagem fica.
-- **Texturas (nossas, `tools/charlie/textures.py`):** reboco terracota por fora, telhado de telha de barro, piso de
-  lajota, teto de tábuas claras com vigas escuras, madeira escura nos caixilhos e no guarda-corpo, azulejos espanhóis
-  nos degraus e na borda do piso elevado, como nas fotos da série. Cada lado de cada face tem a sua, conforme para onde
+  para a rua. As folhas das portas saem, então os vãos ficam abertos e dá para entrar andando. As portas de vidro de
+  correr ficam, com uma folha corrida sobre a outra (meio vão aberto). O portão da garagem fica.
+- **Texturas (nossas, `tools/charlie/textures.py`):** reboco bege por fora (como as imagens de referência), telhado de
+  telha de barro, lajota terracota escura nos pisos, madeira escura no piso da sala rebaixada, teto de tábuas claras
+  com vigas escuras, madeira escura nos caixilhos e no guarda-corpo, azulejos espanhóis nos degraus e na borda do piso
+  elevado. Cada lado de cada face tem a sua, conforme para onde
   olha: a parte de baixo de um telhado é teto, o lado de dentro de uma parede de fora é parede de sala.
 - **Luz:** nas cores dos vértices, de dia e de noite, como nos prédios do jogo. O jogo dobra essas cores, então 128 é a
   textura como ela é. Por isso as cores da 1.23.0 saíam estouradas. A luz de cada canto vem de quanto céu ele vê: os
@@ -26,6 +33,9 @@ dá para entrar e sair andando, sem teleporte.
   lugares da planta da série (`tools/charlie/furniture.py`). Cada jogo cria os seus quando o jogador chega a 160 m da
   casa e tira depois de 220 m; o save do jogo não guarda. O piano de cauda o jogo não tem: é nosso, feito no modelo da
   casa, no piso elevado perto das portas do deck.
+- **As texturas no jogo:** o mod as cria quando os dicionários `bev_law2` e `welod_law2` carregam. Na 1.25 elas não
+  entravam (a casa ficava branca): o mod procurava o dicionário antes de o jogo ter lido o `gta3.img`, e guardava o
+  "não achei".
 - **Escadas:** na colisão, uma rampa sobre os degraus (que têm 28 cm nesse tamanho), para subir andando.
 - **De longe:** o jogo mostra o LOD, só a parte de fora. A casa de perto aparece até 170 m (o bloco do jogo: 80 m).
 - **Chuva:** não chove debaixo dos telhados (um mapa de 0,5 m de onde tem telhado).
@@ -38,18 +48,25 @@ dá para entrar e sair andando, sem teleporte.
 2. **Estrutura:** paredes, telhado, deck e garagem no terreno, com a colisão; o bloco antigo some. Feito (1.23.0).
 3. **Tamanho e texturas:** 1,6x, texturas e luz como as do jogo. Feito (1.24.0).
 4. **Móveis:** objetos do próprio jogo nos lugares da planta, e o piano. Feito (1.25.0).
-5. **Vizinhos:** repintar as casas ao redor e o muro de madeira com escada na areia.
+5. **Terreno elevado, estacas, muro de madeira, muro da rua, portas de vidro, cores das referências; a casa de salvar
+   do lado de volta.** Feito (1.26.0).
+6. **Vizinhos:** repintar as casas ao redor, levá-las até a mesma linha da casa na praia, com sacadas, e o mesmo muro
+   de madeira na frente delas.
 
 ## Código e ferramentas
 
 - `src/client/features/charlie/Lot.cpp`: o `/lote` e o `/extrair` (copia de `models\gta3.img` para `coop\extrair\`
   os modelos e texturas das casas da praia, as colisões e os IPLs da área, para as ferramentas).
+- `src/client/features/charlie/Cut.cpp`: corta o bloco do leste (modelo, LOD e colisão do jogo) quando carrega
+  (`tools/charlie/cut_test.cpp` testa com os arquivos do jogo; `rwedit.py` faz o mesmo em Python, para ver).
 - `src/client/features/charlie/Charlie.cpp`: troca os modelos e as colisões dos dois blocos (por
   `shared/game/ModelSwap`, que a placa NOSTALGIA também usa), põe as texturas nos dicionários dos blocos quando eles
   carregam (por `shared/game/TxdLoad`, que as jaquetas também usam), esconde o que estava no lugar e tira a chuva
   debaixo do telhado.
 - `tools/charlie/build.py model.dae lote.txt src/client/features/charlie/CharlieData.h`: o conversor (DAE → DFF, LOD,
   COL3, as texturas em DXT1, o mapa do telhado e a lista do que esconder). Grava também `tools/charlie/out/`.
+- `tools/charlie/lot.py`: o terreno elevado, o bulkhead com a cerca e as escadas, as estacas, o muro da rua, a rampa e
+  o portão.
 - `tools/charlie/furniture.py`: os móveis (modelo do jogo, lugar na planta, para onde olha), a planta casada com as
   paredes do modelo, e o piano.
 - `tools/charlie/textures.py`: as texturas (`out/textures.png` para ver). `preview.py`: uma vista da casa como o jogo

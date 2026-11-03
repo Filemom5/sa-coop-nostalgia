@@ -1,19 +1,20 @@
 // Charlie Harper's beach house (Two and a Half Men), 1.6 times life size as the game's people and doors are, on
-// Santa Maria Beach in place of the block of houses santahouse04_law2, and over part of the block east of it,
-// santahouse02_law2, which becomes sand (docs/casa-charlie.md). Part of the map: one walks in and out through its
-// open doorways, the deck toward the sea. Everyone with the mod sees it; another mod's blocks (not the game's own)
-// are left as they are.
+// Santa Maria Beach in place of the block of houses santahouse04_law2 and of the two houses of the block east of it
+// (santahouse02_law2) west of the beach safe house, which stays (docs/casa-charlie.md). Up on its lot as a Malibu
+// house is: a wooden bulkhead toward the sea with stairs to the sand, pilings under the house's part over the beach,
+// a wall and a gate toward the road. Part of the map: one walks in and out through its open doorways, the deck toward
+// the sea. Everyone with the mod sees it; another mod's blocks (not the game's own) are left as they are.
 //
-//  * the models (near: santahouse04_law2; far: LODtahouse04_law2, only the outside; the east block's, sand) and the
-//    collisions are ours, from CharlieData.h (tools/charlie, from the SketchUp model), loaded in place of the game's by
-//    shared/game/ModelSwap;
+//  * the models (near: santahouse04_law2; far: LODtahouse04_law2, only the outside) and the collision are ours, from
+//    CharlieData.h (tools/charlie, from the SketchUp model), loaded in place of the game's by shared/game/ModelSwap;
+//    the east block's (and its LOD's) are the game's own, cut as they load (Cut.cpp);
 //  * their textures (stucco, clay roof tiles, terracotta floor, the ceiling's planks, Spanish tiles on the stairs...)
 //    are ours too: made from CharlieData.h's (DXT1) and put in the blocks' texture dictionaries (bev_law2, near;
 //    welod_law2, far, smaller) as these load (shared/game/TxdLoad), before the models that use them;
 //  * the furniture: the game's own objects (sofas, beds, the kitchen, the bathrooms, the deck's table and lounge
 //    chairs...) where the show's floor plan has them, made in each game as its player comes near (within 160 m) and
 //    taken away again past 220 m; not kept by the game's saves. The grand piano is ours, in the house's model;
-//  * the palms, bushes and the lifebuoy of the map that would stand in it are hidden (and walked through): again
+//  * the palms, bushes and the lifebuoy of the map that would stand in the house are hidden (and walked through): again
 //    whenever that part of the map loads anew;
 //  * no rain under its roofs: CCullZones::CamNoRain and PlayerNoRain answer yes there.
 #include <cmath>
@@ -23,6 +24,7 @@
 
 #include "common/lib/log/Log.h"
 #include "features/charlie/CharlieData.h"
+#include "features/charlie/Cut.h"
 #include "shared/game/Game.h"
 #include "shared/game/ModelSwap.h"
 #include "shared/game/Script.h"
@@ -42,6 +44,7 @@ constexpr const char* kLodName = "LODtahouse04_law2";
 constexpr const char* kEastName = "santahouse02_law2";
 constexpr const char* kEastLodName = "LODtahouse02_law2";
 constexpr float kX = 265.969f, kY = -1757.578f, kZ = 8.906f;  // the house's block (heading 0)
+constexpr float kEastX = 307.265625f;                         // the east block (and its LOD), heading 0
 constexpr float kDrawDistance = 170.0f;  // the house near (the game's 80 for the block: the house is bigger)
 constexpr int kFarTexture = 64;          // the textures' size far away
 
@@ -69,15 +72,18 @@ bool IsGames(uint32_t model, const char* name) {
 
 std::vector<uint8_t> Copy(const unsigned char* data, size_t size) { return std::vector<uint8_t>(data, data + size); }
 
-std::vector<uint8_t> Model(uint32_t modelId, const uint8_t*, size_t) {
+std::vector<uint8_t> Model(uint32_t modelId, const uint8_t* dff, size_t size) {
     if (modelId == kHouseModel && IsGames(modelId, kHouseName)) return Copy(data::kHouseDff, sizeof data::kHouseDff);
     if (modelId == kLodModel && IsGames(modelId, kLodName)) return Copy(data::kLodDff, sizeof data::kLodDff);
-    if (modelId == kEastModel && IsGames(modelId, kEastName)) return Copy(data::kEastDff, sizeof data::kEastDff);
-    if (modelId == kEastLodModel && IsGames(modelId, kEastLodName)) return Copy(data::kEastLodDff, sizeof data::kEastLodDff);
+    if ((modelId == kEastModel && IsGames(modelId, kEastName)) || (modelId == kEastLodModel && IsGames(modelId, kEastLodName))) {
+        std::vector<uint8_t> cut = CutModel(dff, size, data::kEastCutX - kEastX);
+        if (cut.empty()) LOGW("Charlie: model %u could not be cut (left as it is)", modelId);
+        return cut;
+    }
     return {};
 }
 
-const uint8_t* Collision(const char* name, const uint8_t*, uint32_t, uint32_t* ourSize) {
+const uint8_t* Collision(const char* name, const uint8_t* body, uint32_t size, uint32_t* ourSize) {
     if (!name) return nullptr;
     if (SameName(name, kHouseName) && IsGames(kHouseModel, kHouseName)) {
         if (!g_ours) LOGI("Charlie: the house's collision in place of %s", kHouseName);
@@ -86,8 +92,11 @@ const uint8_t* Collision(const char* name, const uint8_t*, uint32_t, uint32_t* o
         return data::kHouseCol;
     }
     if (SameName(name, kEastName) && IsGames(kEastModel, kEastName)) {
-        *ourSize = sizeof data::kEastCol;
-        return data::kEastCol;
+        static std::vector<uint8_t> cut;  // the game copies it (CColModel's own data)
+        cut = CutCollision(body, size, data::kEastCutX - kEastX);
+        if (cut.empty()) return nullptr;
+        *ourSize = (uint32_t)cut.size();
+        return cut.data();
     }
     return nullptr;
 }
@@ -176,11 +185,9 @@ bool AddTexture(void* dict, const data::Texture& t, int maxSize) {
 }
 
 void TxdLoaded(int index, void*dict) {
-    static int near = -2, far = -2;
-    if (near == -2) {
-        near = Call<0x731850, int>("bev_law2");  // CTxdStore::FindTxdSlot
-        far = Call<0x731850, int>("welod_law2");
-    }
+    static int near = -1, far = -1;  // their slots, once the game has them (the first TXDs load before gta3.img's)
+    if (near < 0) near = Call<0x731850, int>("bev_law2");  // CTxdStore::FindTxdSlot
+    if (far < 0) far = Call<0x731850, int>("welod_law2");
     if (index != near && index != far) return;
     int n = 0;
     for (const data::Texture& t : data::kTextures) n += AddTexture(dict, t, index == near ? 1024 : kFarTexture);
@@ -287,7 +294,8 @@ public:
         LOGI("Charlie: house %s (models: %s, %s, %s, %s)", g_ours ? "in place" : "not in place (not the game's block)",
              IsGames(kHouseModel, kHouseName) ? "game's" : "other", IsGames(kLodModel, kLodName) ? "game's" : "other",
              IsGames(kEastModel, kEastName) ? "game's" : "other", IsGames(kEastLodModel, kEastLodName) ? "game's" : "other");
-        if (void* mi = g_ours ? ModelInfo(kHouseModel) : nullptr) Ref<float>((uintptr_t)mi + 0x18) = kDrawDistance;
+        for (uint32_t model : {kHouseModel, kEastModel})  // near as far as the house is seen (the east block: not its LOD)
+            if (void* mi = g_ours ? ModelInfo(model) : nullptr) Ref<float>((uintptr_t)mi + 0x18) = kDrawDistance;
         m_next = 0;
         for (int& h : g_piece) h = 0;  // a new game: the old one's objects are gone
         g_furnished = false;

@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 
 import furniture
+import lot
 import textures
 
 NS = {"c": "http://www.collada.org/2005/11/COLLADASchema"}
@@ -36,9 +37,16 @@ OLD_BOX = (-22.27, -12.35, 22.27, 12.36)        # their collisions' boxes, x and
 EAST_BOX = (-19.22, -10.71, 19.22, 10.72)
 SCALE = 1.6
 WEST, NORTH = -21.9, 11.1                       # the house's west side and front, in the block's axes
-FLOOR = 3.85                                    # its floor (the sand: 3.2 to 3.5; the sidewalk up to 3.7)
+FLOOR = 5.3                                     # its floor: 1.7 m over the street, 2.1 over the sand (the deck's stairs reach it)
 GROUND = 3.45                                   # the plate of sand under the blocks
-BASE = 2.9                                      # the house's base goes down to here
+LOT = (-22.2, -26.5, 42.0, 12.3)                # the lot: the old block, and the east block's west part (x, y)
+RAMP = (-21.4, -14.0, 0.3, 12.3)                # the drive up from the street: x from, to, its top's y, the street's
+BEACH_Y = -12.4                                 # south of it the lot is beach (the house over it on pilings)
+EAST_CUT = 308.0                                # the east block: what is west of this x goes (the safe house stays)
+# the glass sliding doors (their leaves the door finder takes for doors): the second leaf of each pair over the first
+SLIDING = {"SketchUp/group_69": (0, 0), "SketchUp/group_70": (-0.90, 0.06),
+           "SketchUp/group_71": (0, 0), "SketchUp/group_72": (0.06, -0.89)}
+LIVING = ((-3.4, 2.7), (3.5, 9.5))              # the sunken living room (plan): a dark wood floor
 CELL = 0.5                                      # the roof's map (no rain under it)
 VER = 0x1803FFFF                                # RenderWare 3.6.0.3, as the game's files
 DROP = ("material_0", "Laura", "edge_color")
@@ -48,9 +56,12 @@ GLASS = (176, 206, 226, 110)
 # the stairs, in the model's plan (turned round, unscaled; z over the floor): the house's flight and the deck's
 STAIRS = [((3.55, 0.25, -0.05), (6.3, 4.0, 2.85)), ((-6.35, -7.6, -1.5), (-4.95, -5.35, 0.05))]
 # texture: metres of the house (game size) one texture covers
-TEX_SIZE = {"nch_stucco": 3.0, "nch_plaster": 3.0, "nch_tile": 1.0, "nch_roof": 2.4, "nch_ceiling": 2.0,
-            "nch_wood": 1.5, "nch_floorwood": 2.4, "nch_sand": 4.0, "nch_siding": 2.6}
-MAT_TEX = {"piano_black": "nch_black", "piano_keys": "nch_keys", "Color_C08": "nch_wood", "Color_M00": "nch_wood", "Wood_Veneer_02": "nch_floorwood",
+TEX_SIZE = {"nch_stucco": 3.0, "nch_plaster": 3.0, "nch_tile": 2.0, "nch_roof": 2.4, "nch_ceiling": 2.0,
+            "nch_wood": 1.5, "nch_floorwood": 2.4, "nch_darkwood": 2.4, "nch_sand": 4.0, "nch_siding": 2.6,
+            "nch_paving": 1.6, "nch_timber": 2.4, "nch_under": 3.0, "nch_white": 1.0, "nch_green": 1.6, "nch_cap": 0.8}
+MAT_TEX = {"piano_black": "nch_black", "piano_keys": "nch_keys", "site_paving": "nch_paving",
+           "site_stucco": "nch_stucco", "site_timber": "nch_timber", "site_under": "nch_under", "site_wood": "nch_wood",
+           "site_white": "nch_white", "site_cap": "nch_cap", "site_green": "nch_green", "site_lamp": "nch_black", "Color_C08": "nch_wood", "Color_M00": "nch_wood", "Wood_Veneer_02": "nch_floorwood",
            "Wallpaper_Stripe": "nch_plaster", "Cladding_Siding_Tan": "nch_siding", "sand": "nch_sand"}
 # what of the map is the blocks and the road: not hidden
 KEEP_MODELS = {6285, 6433, 6284, 6434, 6294, 6432, 6428, 6438}
@@ -121,17 +132,24 @@ def door_groups(parts):
 # ---------------------------------------------------------------- the faces we keep, in the block's place
 def faces(parts):
     """(tris in the block's axes, materials, plan: the same faces in the model's plan: turned round, unscaled, z over
-    the floor)"""
+    the floor). The glass sliding doors stay, one leaf of each pair slid over the other (half the doorway open)"""
     doors = door_groups(parts)
-    keep = [(mat, T) for path, mat, T in parts if path not in doors and not any(mat.startswith(d) for d in DROP)]
-    tris = np.concatenate([T for _, T in keep])
-    mats = np.concatenate([[mat] * len(T) for mat, T in keep])
-    lo, hi = tris.reshape(-1, 3).min(0), tris.reshape(-1, 3).max(0)
+    rest = np.concatenate([T for path, mat, T in parts if path not in doors and not any(mat.startswith(d) for d in DROP)])
+    lo, hi = rest.reshape(-1, 3).min(0), rest.reshape(-1, 3).max(0)
     mid = (lo + hi) / 2
+    keep = [(path, mat, T) for path, mat, T in parts
+            if (path not in doors or path in SLIDING) and not any(mat.startswith(d) for d in DROP)]
+    tris = np.concatenate([T for _, _, T in keep])
+    mats = np.concatenate([[mat] * len(T) for _, mat, T in keep])
+    paths = np.concatenate([[path] * len(T) for path, _, T in keep])
     plan = np.empty_like(tris)  # turned round about the middle (x and y negated: the faces' winding stays)
     plan[..., 0] = -(tris[..., 0] - mid[0])
     plan[..., 1] = -(tris[..., 1] - mid[1])
     plan[..., 2] = tris[..., 2]
+    for path, (dx, dy) in SLIDING.items():
+        sel = paths == path
+        plan[sel, :, 0] += dx
+        plan[sel, :, 1] += dy
     seen, keep_i = set(), []
     for i, t in enumerate(plan):  # the same face twice (in two groups): once
         k = tuple(sorted(tuple(np.round(v * 1000).astype(int)) for v in t))
@@ -145,14 +163,8 @@ def faces(parts):
     local[..., 0] += WEST + half[0] * SCALE
     local[..., 1] += NORTH - half[1] * SCALE
     local[..., 2] += FLOOR - ORIGIN[2]
-    # the base: the slab's underside (20-30 cm under the floor) down into the sand, but not the stairs'
-    low = (plan[..., 2] > -0.35) & (plan[..., 2] < -0.05)
-    for (a, b) in STAIRS:
-        inside = np.all((plan >= np.array(a)) & (plan <= np.array(b)), axis=-1)
-        low &= ~inside
-    local[..., 2][low] = BASE - ORIGIN[2]
-    print("model: %d faces kept of %d (%d door groups out), %.1f x %.1f x %.1f m in the game" % (
-        len(plan), sum(len(T) for _, _, T in parts), len(doors), *((hi - lo) * SCALE)))
+    print("model: %d faces kept of %d (%d door leaves out, %d slid), %.1f x %.1f x %.1f m in the game" % (
+        len(plan), sum(len(T) for _, _, T in parts), len(doors) - len(SLIDING), len(SLIDING), *((hi - lo) * SCALE)))
     return local, mats, plan
 
 
@@ -235,16 +247,17 @@ def classify(mats, plan, normals, open_, piece_area):
     z = plan[..., 2]
     zmid, h = z.mean(1), z.max(1) - z.min(1)
     area = np.linalg.norm(np.cross(plan[:, 1] - plan[:, 0], plan[:, 2] - plan[:, 0]), axis=1) / 2
-    on_stairs = np.zeros(len(plan), bool)
-    for (lo, hi) in STAIRS:
-        on_stairs |= np.all((plan >= np.array(lo) - 1e-3) & (plan <= np.array(hi) + 1e-3), axis=(1, 2))
+    inbox = lambda box: np.all((plan >= np.array(box[0]) - 1e-3) & (plan <= np.array(box[1]) + 1e-3), axis=(1, 2))
+    on_stairs, deck_stairs = inbox(STAIRS[0]), inbox(STAIRS[1])  # the house's flight; the deck's, down to the sand
     out = []
     for i, m in enumerate(mats):
         n, o = normals[i], open_[i]
         if "Glass" in m:
             out.append("glass")
-        elif m.startswith("piano"):
+        elif m.startswith("piano") or m.startswith("site_"):
             out.append(MAT_TEX[m])
+        elif deck_stairs[i] and m == "material":
+            out.append("nch_timber")             # wooden, as the bulkhead's
         elif m == "sand":
             out.append("nch_sand")
         elif n[2] > 0.2 and o > 0.45 and zmid[i] > 2.0:
@@ -256,7 +269,11 @@ def classify(mats, plan, normals, open_, piece_area):
         elif m in MAT_TEX:
             out.append(MAT_TEX[m])
         elif n[2] > 0.2:
-            if 0.05 < zmid[i] < 2.7 and area[i] < 1.5 or zmid[i] >= 2.7:
+            (lx, ly), (hx, hy) = LIVING
+            c = plan[i].mean(0)
+            if abs(zmid[i]) < 0.05 and lx < c[0] < hx and ly < c[1] < hy:
+                out.append("nch_darkwood")
+            elif 0.05 < zmid[i] < 2.7 and area[i] < 1.5 or zmid[i] >= 2.7:
                 out.append("nch_floorwood")
             else:
                 out.append("nch_tile")
@@ -525,7 +542,7 @@ def hidden(lote, tris, tex):
         ex, ey = x - EAST[0], y - EAST[1]
         i, j = int((ly - y0) / 0.5), int((lx - x0) / 0.5)
         on_house = 0 <= i < h and 0 <= j < w and grid[i, j]
-        on_east = EAST_BOX[0] < ex < EAST_BOX[2] and EAST_BOX[1] < ey < EAST_BOX[3]
+        on_east = EAST_BOX[0] < ex < EAST_BOX[2] and EAST_BOX[1] < ey < EAST_BOX[3] and x < EAST_CUT
         if (on_house or on_east) and (model, round(x, 1), round(y, 1)) not in [(m, round(a, 1), round(b, 1)) for m, a, b in out]:
             out.append((model, x, y))
     print("hidden: %s" % ", ".join("%d at %.1f,%.1f" % o for o in out))
@@ -533,6 +550,7 @@ def hidden(lote, tris, tex):
 
 
 def main(dae, lote, header=None):
+    """dae: the house's model; lote: coop\\lote.txt; header: CharlieData.h"""
     tris, mats, plan = faces(load(dae))
     off = np.array([tris[0, 0, 0] - plan[0, 0, 0] * SCALE, tris[0, 0, 1] - plan[0, 0, 1] * SCALE, FLOOR - ORIGIN[2]])
     # the furniture: where it goes (the game's objects: the mod puts them); the piano: ours, in the model
@@ -549,11 +567,16 @@ def main(dae, lote, header=None):
     mats = np.concatenate([mats, pmats])
     plan = np.concatenate([plan, (ptris - off) / SCALE])
     given = np.concatenate([given, puv])
-    # the plate of sand: the old block's box, under the house
-    tris = np.concatenate([tris, plate(OLD_BOX, GROUND, ORIGIN)])
-    plan = np.concatenate([plan, np.zeros((2, 3, 3)) - 9])
-    mats = np.concatenate([mats, ["sand", "sand"]])
-    given = np.concatenate([given, np.full((2, 3, 2), np.nan)])
+    # the lot: raised, its bulkhead, the pilings, the street's wall and the drive (lot.py)
+    zl = lambda z: z - ORIGIN[2]
+    stris, smats, scol, kind = lot.build(tris[:n_house], zl(FLOOR), LOT, RAMP, (RAMP[0], RAMP[1]),
+                                         street_z=zl(3.62), sand_z=zl(3.15), beach_y=BEACH_Y)
+    print("lot: %d faces" % len(stris))
+    n_site = len(tris)
+    tris = np.concatenate([tris, stris])
+    mats = np.concatenate([mats, smats])
+    plan = np.concatenate([plan, (stris - off) / SCALE])
+    given = np.concatenate([given, np.full((len(stris), 3, 2), np.nan)])
     normals = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])
     normals /= np.linalg.norm(normals, axis=1)[:, None]
     sky = Sky(tris)
@@ -583,7 +606,7 @@ def main(dae, lote, header=None):
     T, UV, DAY, NIGHT, TEX, OPEN = (np.concatenate(x) for x in zip(*sides))
     print("textures: %s" % dict(collections.Counter(TEX)))
     dff = write_dff(T, UV, DAY, NIGHT, TEX, "santahouse04_law2")
-    far = (OPEN > 0.2) | (TEX == "nch_sand")                       # far away: what is seen from outside
+    far = OPEN > 0.2                                               # far away: what is seen from outside
     lod = write_dff(T[far], UV[far], DAY[far], NIGHT[far], TEX[far], "LODtahouse04_law2")
     tex = sides[0][4]
     # the collision: the faces, and the stairs' ramps
@@ -591,16 +614,7 @@ def main(dae, lote, header=None):
     nplan /= np.maximum(np.linalg.norm(nplan, axis=1), 1e-9)[:, None]
     ramp = ramps(plan[:n_house], tris[:n_house], nplan[:n_house])
     ramp_l = ramp * SCALE + off                    # (as faces() places the plan)
-    col = write_col("santahouse04_law2", 6285, np.concatenate([tris, ramp_l]) if len(ramp_l) else tris)
-    # the east block: sand
-    east = plate(EAST_BOX, GROUND, EAST)
-    en = np.tile([0, 0, 1.0], (2, 1))
-    euv = east[..., :2] / TEX_SIZE["nch_sand"]
-    eday, enight = light(en, np.ones((2, 3)), np.zeros(2, bool))
-    etex = np.array(["nch_sand", "nch_sand"])
-    east_dff = write_dff(east, euv, eday, enight, etex, "santahouse02_law2")
-    east_lod = write_dff(east, euv, eday, enight, etex, "LODtahouse02_law2")
-    east_col = write_col("santahouse02_law2", 6284, east)
+    col = write_col("santahouse04_law2", 6285, np.concatenate([tris, ramp_l, scol]))
     rx, ry, rw, rh, rbits, rtop, _ = roof_map(tris, tex)
     hide = hidden(lote, tris, tex)
     tx = textures.make()
@@ -614,14 +628,14 @@ def main(dae, lote, header=None):
         return
     text = ["// Generated by tools/charlie/build.py from the SketchUp model of Charlie Harper's house: do not edit.",
             "// The models and collisions the mod loads in place of the game's (santahouse04_law2: the house; "
-            "santahouse02_law2: sand), the textures, the roof's map and what of the map to hide.",
+            "the lot round it), the textures, the roof's map and what of the map to hide.",
             "#pragma once", "", "#include <cstdint>", "", "namespace coop::charlie::data {", "",
             "// santahouse04_law2 (near) and LODtahouse04_law2 (far: the outside only)",
             c_array("kHouseDff", dff), "", c_array("kLodDff", lod), "",
-            "// santahouse02_law2 and LODtahouse02_law2: sand", c_array("kEastDff", east_dff), "",
-            c_array("kEastLodDff", east_lod), "",
             "// the collisions, from the file's 32-byte header on (what CFileLoader::LoadCollisionModelVer3 reads)",
-            c_array("kHouseCol", col[32:]), "", c_array("kEastCol", east_col[32:]), "",
+            c_array("kHouseCol", col[32:]), "",
+            "// santahouse02_law2 (and its LOD): the game's own, west of this x (world) cut off as it loads",
+            "inline constexpr float kEastCutX = %.2ff;" % EAST_CUT, "",
             "// where a roof is over (no rain there): cells of %.1f m from the block's x, y; a bit each, row by row" % CELL,
             "inline constexpr float kRoofX = %.2ff, kRoofY = %.2ff, kRoofCell = %.2ff, kRoofTop = %.2ff;  // the block's axes"
             % (rx, ry, CELL, rtop),

@@ -201,18 +201,25 @@ def keys():
 def make():
     """{name: (rgb array, size)} in the order the header gets them"""
     return {
-        "nch_stucco": stucco((214, 138, 96), 11),       # outside: the show's orange-terracotta walls
-        "nch_plaster": stucco((236, 214, 168), 21),     # inside: cream
-        "nch_tile": tiles((186, 104, 64), 2, (150, 128, 104), 31),  # floors: 2 x 2 terracotta tiles
+        "nch_stucco": stucco((222, 200, 160), 11),      # outside: beige stucco, as the reference pictures
+        "nch_plaster": stucco((238, 226, 196), 21),     # inside: cream
+        "nch_tile": tiles((132, 64, 44), 4, (78, 58, 48), 31, jitter=0.10),  # floors: dark terracotta tiles
         "nch_roof": roof_tiles(41),
         "nch_ceiling": planks((206, 170, 118), 8, 51, grain=0.10),
         "nch_wood": planks((104, 62, 34), 4, 61, gap=(70, 40, 22), grain=0.20),
         "nch_floorwood": planks((150, 96, 56), 6, 71, grain=0.16, vertical=False),
+        "nch_darkwood": planks((74, 50, 38), 6, 72, gap=(40, 28, 22), grain=0.14, vertical=False),
         "nch_riser": talavera(81),
         "nch_sand": tint((206, 182, 136), fbm(256, seed=91) * 0.6 + noise(256, 100, 92) * 0.6, 0.08),
         "nch_siding": siding(101),
         "nch_black": np.asarray(Image.fromarray(lacquer(111).astype(np.uint8)).resize((128, 128)), float),
         "nch_keys": keys(),
+        "nch_paving": tiles((200, 182, 156), 2, (150, 136, 118), 121, jitter=0.07),
+        "nch_timber": planks((132, 114, 92), 6, 131, gap=(60, 52, 44), grain=0.18),
+        "nch_under": tint((34, 30, 26), noise(256, 30, 141), 0.25),
+        "nch_white": tint((236, 234, 226), fbm(256, seed=151), 0.04),
+        "nch_green": planks((62, 84, 58), 6, 161, gap=(36, 48, 34), grain=0.12),
+        "nch_cap": tiles((176, 86, 54), 2, (140, 72, 48), 171, jitter=0.08),
     }
 
 

@@ -119,6 +119,7 @@ PIECES = [
 ]
 
 PIANO = (945, 960, 56.5)  # the drawing's x, y; its heading in the game (its keyboard's side to -y)
+FLIP = {1811}  # these have their front to +y (the chairs)
 
 
 def to_plan(u, v, floor):
@@ -192,7 +193,7 @@ def place(plan, mats, scale):
     wall = {"ground": walls(plan, normals, mats, 1.0), "upper": walls(plan, normals, mats, 3.8)}
     out, moved = [], []
     for model, what, u, v, facing, floor, height in PIECES:
-        xy, head = to_plan(u, v, floor), heading(facing)
+        xy, head = to_plan(u, v, floor), heading(facing + (180 if model in FLIP else 0))
         size = SIZE.get(model, (1.0, 1.0, 1.0))
         if height == 0 and size[2] > 0.05:  # rugs and things on others: no check
             best = None

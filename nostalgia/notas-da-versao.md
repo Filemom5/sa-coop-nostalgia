@@ -1,5 +1,18 @@
 ## Novo nesta versão
 
+- **Casa do Charlie Harper, terceira versão:**
+  - **Texturas de volta:** na versão passada a casa e o piano ficavam brancos. Agora as texturas aparecem.
+  - **Como uma casa de Malibu:** a casa fica num terreno elevado. Do lado do mar tem um muro de madeira com cerca
+    branca e escadas de madeira até a areia, e a parte da casa sobre a praia fica em cima de estacas. Do lado da rua,
+    um muro de reboco com capa de terracota e um portão verde no alto da rampa para os carros.
+  - **Cores das imagens de referência:** reboco bege por fora, lajota terracota escura nos pisos, madeira escura na
+    sala rebaixada.
+  - **Portas de vidro de correr** de volta nas portas do deck, com uma folha corrida (dá para passar).
+  - As cadeiras viradas ao contrário foram desviradas.
+  - **A casa de salvar da praia, ao lado, voltou.** Só as duas casas a oeste dela saíram para dar lugar ao terreno.
+
+## Da versão 1.25.1
+
 - **`/extrair`:** copia de dentro do jogo os arquivos das casas da praia de Santa Maria (modelos, texturas e onde
   cada coisa fica) para a pasta `coop\extrair`. É o próximo passo para repintar as casas vizinhas e fazer o muro de
   madeira na areia.
