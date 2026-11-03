@@ -116,12 +116,6 @@ public:
         Cmd(0x0652).I(137).Out(&times).Run();  // GET_INT_STAT: STAT_TIMES_CHEATED
         cheated = 0;
         LOGI("The loaded game carried the cheat warning (cheats typed in it: %d): cleared", times);
-        static bool told = false;
-        if (!told)
-            ui::TheChat().AddSystem(Format(TR("В сохранении была отметка о читах (введено читов: %d). Она снята: без новых читов предупреждения не будет.",
-                                              "The save carried the cheat warning (cheats typed in it: %d). It is gone: no new cheat, no warning."),
-                                           times));
-        told = true;
     }
 
     static Cheats& Instance() {

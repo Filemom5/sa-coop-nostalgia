@@ -3,7 +3,7 @@
 // the "Sunset" one). Everyone with the mod sees them on whoever wears them (the clothes go between the games already, as
 // texture names).
 //
-//  * the pictures: as a TXD loads (CTxdStore::LoadTxd, FinishLoadTxd: a clothes texture from player.img too), ours
+//  * the pictures: as a TXD loads (shared/game/TxdLoad: a clothes texture from player.img too), ours
 //    paints over the textures "coach", "coachsemi" and "hoodjackbeige" when they are the game's own (JacketPaint.cpp);
 //  * in HD: CClothesBuilder::ConstructTextures makes a dressed ped's "torso" texture from the jacket's, 256 x 256 like
 //    it (its skin, the jacket over it). With one of ours on, that texture gets a raster of 1024 x 1024 with mipmaps,
@@ -19,6 +19,7 @@
 #include "common/lib/log/Log.h"
 #include "features/clothes/JacketPaint.h"
 #include "shared/game/Game.h"
+#include "shared/game/TxdLoad.h"
 #include "shared/lib/core/Core.h"
 #include "shared/lib/memory/Memory.h"
 
@@ -27,7 +28,6 @@ namespace coop::clothes {
 namespace {
 using namespace game;
 
-constexpr uintptr_t kTxdPool = 0xC8800C;          // CTxdStore::ms_pTxdPool
 constexpr uintptr_t kShopKeys = 0xA97D90;         // CShopping::ms_keys
 constexpr uintptr_t kShopBought = 0xA972A0;       // CShopping::ms_bHasBought
 constexpr uintptr_t kShopItems = 0xA9A310;        // CShopping::ms_numBuyableItems
@@ -40,11 +40,7 @@ constexpr uint8_t kFilterLinear = 2, kFilterLinearMipLinear = 6;  // rwFILTERLIN
 uint8_t* Lock(void* raster, int level, int mode) { return Call<0x7FB2D0, uint8_t*>(raster, (uint8_t)level, mode); }  // RwRasterLock
 void Unlock(void* raster) { Call<0x7FAEC0, void*>(raster); }  // RwRasterUnlock
 
-void PaintTxd(int index) {
-    auto* pool = Ref<CPoolHeader*>(kTxdPool);
-    if (!pool || index < 0 || index >= pool->size || pool->byteMap[index] < 0) return;
-    void* dict = Ref<void*>((uintptr_t)pool->objects + (uintptr_t)index * 0xC);  // TxdDef::m_pRwDictionary
-    if (!dict) return;
+void PaintTxd(int, void* dict) {
     for (int j = 0; j < Count(); ++j) {
         const char* name = Texture(j);
         void* tex = Call<0x7F39F0, void*>(dict, name);  // RwTexDictionaryFindNamedTexture
@@ -58,19 +54,6 @@ void PaintTxd(int index) {
         Unlock(raster);
         if (painted) LOGI("Clothes: our %s painted over the game's", name);
     }
-}
-
-using LoadTxdFn = bool(__cdecl*)(int index, void* stream);
-LoadTxdFn g_origLoadTxd = nullptr, g_origFinishLoadTxd = nullptr;
-bool __cdecl HookLoadTxd(int index, void* stream) {
-    bool ok = g_origLoadTxd(index, stream);
-    if (ok) PaintTxd(index);
-    return ok;
-}
-bool __cdecl HookFinishLoadTxd(int index, void* stream) {
-    bool ok = g_origFinishLoadTxd(index, stream);
-    if (ok) PaintTxd(index);
-    return ok;
 }
 
 // A dressed ped's "torso" texture made from one of ours (256 x 256): a new raster of 1024 x 1024 for it, PaintHd's, and
@@ -162,8 +145,7 @@ class Clothes : public Module {
 public:
     const char* Name() const override { return "Clothes"; }
     void OnInstallHooks() override {
-        mem::HookFn(0x731DD0, &HookLoadTxd, &g_origLoadTxd, "CTxdStore::LoadTxd");
-        mem::HookFn(0x731E40, &HookFinishLoadTxd, &g_origFinishLoadTxd, "CTxdStore::FinishLoadTxd");
+        game::AddTxdLoaded(&PaintTxd);
         mem::HookFn(0x6A0050, &HookTextGet, &g_origTextGet, "CText::Get");
         mem::HookFn(0x5A6040, &HookConstructTextures, &g_origConstructTextures, "CClothesBuilder::ConstructTextures");
     }

@@ -1,5 +1,16 @@
 ## Novo nesta versão
 
+- **Casa do Charlie Harper, segunda versão:**
+  - **Maior:** 1,6x, no tamanho das pessoas e das portas do jogo. Ela ocupa também parte do terreno vizinho do lado
+    leste (que virou areia) e avança para a praia.
+  - **Cores como as do jogo:** com texturas de verdade (reboco terracota, telhado de telha, piso de lajota, teto de
+    tábuas com vigas, azulejos espanhóis na escada) e sem o brilho estourado.
+  - A escada sobe como rampa, sem travar nos degraus.
+- Ao carregar o jogo, não aparece mais a mensagem no chat sobre o aviso de cheats. O aviso continua sumindo do save do
+  mesmo jeito.
+
+## Da versão 1.23.0
+
 - **Casa do Charlie Harper (Two and a Half Men) na praia:** em Santa Maria Beach, em tamanho real, no lugar das casas
   laranja e bege que ficavam ali. Dá para entrar andando pelas portas, sem teleporte, e o deck fica virado para o mar.
   Não chove dentro. Por enquanto é a estrutura: paredes, telhado, escada, deck e garagem, ainda sem móveis e sem
