@@ -1,5 +1,11 @@
 ## Novo nesta versão
 
+- **`/extrair`:** copia de dentro do jogo os arquivos das casas da praia de Santa Maria (modelos, texturas e onde
+  cada coisa fica) para a pasta `coop\extrair`. É o próximo passo para repintar as casas vizinhas e fazer o muro de
+  madeira na areia.
+
+## Da versão 1.25.0
+
 - **Casa do Charlie Harper mobiliada:** sofás e poltronas na sala, o piano de cauda preto perto das portas do deck,
   mesa de centro, luminárias e plantas; a cozinha com geladeira de inox, fogão, pia e a mesa redonda; a sala de TV; os
   quartos com camas e criados-mudos; os banheiros; a mesa e as espreguiçadeiras do deck; e a prancha de surfe do

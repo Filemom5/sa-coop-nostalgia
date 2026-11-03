@@ -42,7 +42,8 @@ dá para entrar e sair andando, sem teleporte.
 
 ## Código e ferramentas
 
-- `src/client/features/charlie/Lot.cpp`: o `/lote`.
+- `src/client/features/charlie/Lot.cpp`: o `/lote` e o `/extrair` (copia de `models\gta3.img` para `coop\extrair\`
+  os modelos e texturas das casas da praia, as colisões e os IPLs da área, para as ferramentas).
 - `src/client/features/charlie/Charlie.cpp`: troca os modelos e as colisões dos dois blocos (por
   `shared/game/ModelSwap`, que a placa NOSTALGIA também usa), põe as texturas nos dicionários dos blocos quando eles
   carregam (por `shared/game/TxdLoad`, que as jaquetas também usam), esconde o que estava no lugar e tira a chuva
