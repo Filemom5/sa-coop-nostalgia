@@ -17,6 +17,7 @@
 #include "features/roof/Roof.h"
 #include "features/radio/Headphones.h"
 #include "features/basketball/Basketball.h"
+#include "features/home/Home.h"
 #include "features/perf-hud/PerfHud.h"
 #include "features/ping/Ping.h"
 #include "features/weapon-wheel/WeaponWheel.h"
@@ -457,7 +458,7 @@ bool OnKeyDown(int vk, bool repeat) {
     }
     if (vk != cfg.headphonesKey) headphones::OtherKey();  // a cheat being typed is no tap on the headphones' key
     if (vk == VK_ESCAPE && CutsceneSkipDecline()) return true;  // "watch on", not the pause menu
-    if ((vk == 'Y' || vk == 'N') && !game::MenuActive() && (contest::Key(vk) || teleport::Key(vk == 'Y') || basket::Key(vk == 'Y') ||
+    if ((vk == 'Y' || vk == 'N') && !game::MenuActive() && (contest::Key(vk) || teleport::Key(vk == 'Y') || basket::Key(vk == 'Y') || home::Key(vk == 'Y') ||
                                                         SideCallKey(vk == 'Y')))
         return true;  // a call, a request
     if (vk == 'U' && !game::MenuActive() && !typingCheat && contest::Key(vk)) return true;  // a contest's challenge

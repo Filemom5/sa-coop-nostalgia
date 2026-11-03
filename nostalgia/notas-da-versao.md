@@ -1,5 +1,20 @@
 ## Novo nesta versão
 
+- **Casas dos jogadores:** cada um marca a própria casa em qualquer porta do mapa com **`/casa marcar`**.
+  - A casinha azul na porta leva para um interior de casa do próprio jogo. Cada casa tem o seu, então ninguém se encontra
+    lá dentro. A seta lá dentro leva de volta.
+  - Do lado da porta tem um **disquete** para salvar, e a casa aparece no radar.
+  - Quem entra no servidor aparece na porta da casa principal. **`/home`** leva para lá a qualquer hora, fora de missão.
+    Ao morrer, continua o hospital.
+  - A primeira casa é grátis. Para ter outra sem largar a sua, a tela mostra o preço (pelo bairro, como em 1992) e você
+    confirma com Y.
+  - Os amigos veem a porta da sua casa e podem visitar.
+- **Carro da casa:** no volante, com o carro parado na vaga, **`/casa carro`**. Ele fica sempre ali, com as cores e as
+  peças da oficina, quando você chega perto. O primeiro é grátis; os outros custam o valor do carro.
+- **`/casa`** abre o painel com suas casas, seus carros e todos os comandos.
+
+## Da versão 1.21.0
+
 - **Basquete no estilo NBA Street:**
   - **Enterrada em terceira pessoa:** a câmera não pula mais para a primeira pessoa. Você vê a enterrada inteira.
   - **Regras de rua:** até 21, 1 ponto de dentro do arco e 2 de fora, ganha com 2 de vantagem. `/basquete 11` muda o

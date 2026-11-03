@@ -241,6 +241,8 @@ enum MsgId : uint8_t {
                               // seed, u16 style), 10 trick (u8 kind, u16 style, u8 combo), 11 ankles broken (u8 victim, u8
                               // left), 12 steal (thief -> holder: u8 holder), 13 steal's answer (holder -> all: u16 no, u8
                               // thief, u8 stolen), 14 a block's jump
+    G_HOME = 179,             // reliable: a player's own houses (Home.cpp, docs/casas.md): u8 op 1, u8 n x {vec3 door, f32
+                              // heading, u8 interior, u8 zone name length + its bytes, u8 city}
 
     G_PING = 197,             // a quick mark (Ping.cpp): u8 op (1 mark, 2 take away: reliable; 3 move: the state channel, the
                               // car or person of the sender's mark is there now), u8 kind (0 place, 1 car, 2 person, 3

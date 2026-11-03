@@ -7,6 +7,7 @@
 #include "entities/player/Players.h"
 #include "entities/session/Flow.h"
 #include "features/basketball/Basketball.h"
+#include "features/home/Home.h"
 #include "features/story/contest/Contest.h"
 #include "features/story/missions/Missions.h"
 #include "features/teleport/Teleport.h"
@@ -107,7 +108,7 @@ void RenderOverlay() {
     if (phase == flow::Phase::WaitingWorld || phase == flow::Phase::StartingServer || phase == flow::Phase::Connecting)
         st = flow::StatusText();
     else if (!frontend && (st = CutsceneSkipText(hint)).empty() && (st = contest::Text(hint)).empty() &&
-             (st = teleport::Text(hint)).empty() && (st = basket::Text(hint)).empty() && (st = SideCallText(hint)).empty())
+             (st = teleport::Text(hint)).empty() && (st = basket::Text(hint)).empty() && (st = home::Text(hint)).empty() && (st = SideCallText(hint)).empty())
         st = MissionWaitText(hint);
     if (!core::ConnectMenuVisible() && !st.empty()) {
         float w = std::max(g.TextWidth(FONT_MENU, st), hint.empty() ? 0.0f : g.TextWidth(FONT_SMALL, hint)) + 48 * s;
