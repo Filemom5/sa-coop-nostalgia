@@ -1,5 +1,10 @@
 ## Novo nesta versão
 
+- **`/lote`:** grava o terreno em volta de onde você está (o chão, o mar e os prédios do mapa) no arquivo
+  `coop\lote.txt`. É o primeiro passo da casa do Charlie Harper na praia.
+
+## Da versão 1.22.1
+
 - **Casa só sua:** a porta amarela do próprio jogo dentro do interior fica fechada enquanto você está na sua casa (ou
   visitando a de um amigo). Antes, sair por ela levava para a casa original em outro lugar do mapa. A saída é a seta.
 - **Sem aviso de cheat ao salvar:** o aviso vinha guardado no save desde algum cheat digitado no passado daquele mundo.
