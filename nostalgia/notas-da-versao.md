@@ -1,5 +1,12 @@
 ## Novo nesta versão
 
+- **Casa do Charlie Harper (Two and a Half Men) na praia:** em Santa Maria Beach, em tamanho real, no lugar das casas
+  laranja e bege que ficavam ali. Dá para entrar andando pelas portas, sem teleporte, e o deck fica virado para o mar.
+  Não chove dentro. Por enquanto é a estrutura: paredes, telhado, escada, deck e garagem, ainda sem móveis e sem
+  texturas.
+
+## Da versão 1.22.3
+
 - **Casas dos jogadores:**
   - A casinha azul de entrada fica na porta, encostada na parede, como as marcações amarelas do jogo. As casas já
     marcadas acham a porta sozinhas na próxima vez que você chegar perto.
