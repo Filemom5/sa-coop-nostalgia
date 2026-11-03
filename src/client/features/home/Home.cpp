@@ -109,6 +109,8 @@ struct V3 {
 struct House {
     V3 door;               // where the player stood marking it, facing the door
     float heading = 0.0f;  // degrees
+    V3 icon;               // its icon: at the door itself, as the game's entrances stand (hasIcon: found)
+    bool hasIcon = false;
     uint8_t interior = 0;
     int32_t paid = 0;
     std::string zone;      // its neighbourhood as the game names it
@@ -152,6 +154,8 @@ struct Inside {
     House house;
     int exitIcon = 0;
     bool armed = false;
+    V3 exitAt;             // the way out: the interior's own door (hasExit: found), else where we came in
+    bool hasExit = false;
 } g_in;
 // The game's own doors of that interior lead to its real street door, another house of the map (02.11: out of the
 // player's house through the yellow marker, in another part of the city): shut while we are in there.
@@ -210,9 +214,31 @@ int CjRef() { return GetPedRef(FindPlayerPed(0)); }
 V3 CjPos() { return ToV3(FindPlayerPed(0)->GetPosition()); }
 int32_t& Money() { return PlayerInfos()[0].money; }
 
+// the house's icon: at its door (by the wall in front of where it was marked), else where it was marked
+V3 DoorSpot(const House& h) { return h.hasIcon ? h.icon : h.door; }
 // the door's street side, where one comes out; the disk at its right
-V3 OutSpot(const House& h) { return Add(h.door, Ahead(h.heading), -1.6f); }
-V3 DiskSpot(const House& h) { return Add(Add(h.door, Right(h.heading), 1.6f), Ahead(h.heading), -0.6f); }
+V3 OutSpot(const House& h) { return Add(DoorSpot(h), Ahead(h.heading), -1.4f); }
+V3 DiskSpot(const House& h) { return Add(Add(DoorSpot(h), Right(h.heading), 1.6f), Ahead(h.heading), -0.9f); }
+
+// The wall ahead of where the house was marked (the player faced its door): the icon 0.7 m in front of it, as the game's
+// own yellow markers stand at a building's door, not where the player stood (03.11). Nothing within 5 m: half a metre on.
+void FindIcon(House& h) {
+    CPlayerPed* me = FindPlayerPed(0);
+    V3 f = Ahead(h.heading);
+    CVector from(h.door.x, h.door.y, h.door.z + 0.3f), to(h.door.x + f.x * 5.0f, h.door.y + f.y * 5.0f, h.door.z + 0.3f);
+    CEntity*& ignore = Ref<CEntity*>(0xB7CD68);  // CWorld::pIgnoreEntity: not our own player
+    CEntity* saved = ignore;
+    ignore = me;
+    uint8_t cp[0x2C] = {};  // CColPoint: m_vecPoint first
+    CEntity* hit = nullptr;
+    bool any = Call<0x56BA00, bool>(&from, &to, (void*)cp, &hit, true, false, false, true, false, true, false, false);  // CWorld::ProcessLineOfSight
+    ignore = saved;
+    float d = any ? std::hypot(((CVector*)cp)->x - from.x, ((CVector*)cp)->y - from.y) : 1.3f;
+    d = std::clamp(d - 0.7f, 0.0f, 4.3f);
+    h.icon = Add(h.door, f, d);
+    h.hasIcon = true;
+    LOGI("Homes: the door of the house in %s %.1f m ahead of where it was marked%s", h.zone.c_str(), d, any ? "" : " (no wall)");
+}
 
 std::string Dollars(int v) {
     std::string s = std::to_string(std::max(v, 0)), out;
@@ -307,13 +333,16 @@ void WriteHouse(Writer& w, const House& h) {
     w.U8((uint8_t)z.size());
     w.Bytes(z.data(), z.size());
     w.U8(h.city);
+    w.U8(h.hasIcon ? 1 : 0), w.F32(h.icon.x), w.F32(h.icon.y), w.F32(h.icon.z);
 }
-House ReadHouse(Reader& r) {
+// version 1 of the file had no icon
+House ReadHouse(Reader& r, int version = 2) {
     House h;
     h.door.x = r.F32(), h.door.y = r.F32(), h.door.z = r.F32(), h.heading = r.F32(), h.interior = r.U8();
     int n = r.U8();
     for (int i = 0; i < n && r.Ok(); ++i) h.zone += (char)r.U8();
     h.city = r.U8();
+    if (version >= 2) h.hasIcon = r.U8() != 0, h.icon.x = r.F32(), h.icon.y = r.F32(), h.icon.z = r.F32();
     if (h.interior >= kInteriorCount) h.interior = 0;
     return h;
 }
@@ -322,7 +351,7 @@ void SaveOwn() {
     std::wstring path = FilePath();
     if (path.empty()) return;
     Writer w;
-    w.U32(0x31454D48);  // "HME1"
+    w.U32(0x32454D48);  // "HME2"
     w.U8((uint8_t)g_own.houses.size()), w.U8((uint8_t)g_own.main);
     for (const House& h : g_own.houses) WriteHouse(w, h), w.I32(h.paid);
     w.U8((uint8_t)g_own.cars.size());
@@ -342,11 +371,13 @@ void LoadOwn() {
     std::wstring path = FilePath();
     if (path.empty() || !ReadFileBytes(path, b) || b.size() < 6) return;
     Reader r(b.data(), b.size());
-    if (r.U32() != 0x31454D48) return LOGW("Homes: %s is not ours", WideToUtf8(path).c_str());
+    uint32_t magic = r.U32();
+    int version = magic == 0x32454D48 ? 2 : magic == 0x31454D48 ? 1 : 0;
+    if (!version) return LOGW("Homes: %s is not ours", WideToUtf8(path).c_str());
     int n = r.U8();
     g_own.main = r.U8();
     for (int i = 0; i < n && r.Ok(); ++i) {
-        House h = ReadHouse(r);
+        House h = ReadHouse(r, version);
         h.paid = r.I32();
         if (r.Ok()) g_own.houses.push_back(h);
     }
@@ -605,11 +636,18 @@ void UpdateDoors() {
             DropIcons(ic, false);
             continue;
         }
-        if (!ic.door) ic.door = MakeIcon(kModelHouse, {h.door.x, h.door.y, h.door.z - 0.35f}, 0), ic.doorArmed = Dist(p, h.door) > kArm;
+        if (!g_own.houses[i].hasIcon && Flat(p, h.door) < 25.0f) {
+            FindIcon(g_own.houses[i]);
+            DropIcons(ic, false);
+            SaveOwn();
+            SendOwn();
+        }
+        V3 at = DoorSpot(h);
+        if (!ic.door) ic.door = MakeIcon(kModelHouse, {at.x, at.y, at.z - 0.35f}, 0), ic.doorArmed = Dist(p, at) > kArm;
         V3 disk = DiskSpot(h);
         if (!ic.disk) ic.disk = MakeIcon(kModelDisk, {disk.x, disk.y, disk.z - 0.35f}, 0), ic.diskArmed = Dist(p, disk) > kArm;
         Spin(ic.door), Spin(ic.disk);
-        float dd = Dist(p, h.door), ds = Dist(p, disk);
+        float dd = Dist(p, at), ds = Dist(p, disk);
         if (dd > kArm) ic.doorArmed = true;
         if (ds > kArm) ic.diskArmed = true;
         if (!onFoot || g_trip.stage) continue;
@@ -637,9 +675,10 @@ void UpdateDoors() {
                 DropIcons(ic, false);
                 continue;
             }
-            if (!ic.door) ic.door = MakeIcon(kModelHouse, {h.door.x, h.door.y, h.door.z - 0.35f}, 0), ic.doorArmed = Dist(p, h.door) > kArm;
+            V3 at = DoorSpot(h);
+            if (!ic.door) ic.door = MakeIcon(kModelHouse, {at.x, at.y, at.z - 0.35f}, 0), ic.doorArmed = Dist(p, at) > kArm;
             Spin(ic.door);
-            float dd = Dist(p, h.door);
+            float dd = Dist(p, at);
             if (dd > kArm) ic.doorArmed = true;
             if (onFoot && !g_trip.stage && ic.doorArmed && dd < kDoorReach) {
                 ic.doorArmed = false;
@@ -653,7 +692,7 @@ void UpdateDoors() {
     if (g_in.on) {
         const Interior& in = kInteriors[g_in.house.interior];
         V3 at{in.x, in.y, in.z};
-        if (area != in.area || Dist(p, at) > 60.0f || me->Health() <= 0.0f) {
+        if (area != in.area || Dist(p, {in.x, in.y, in.z}) > 60.0f || me->Health() <= 0.0f) {
             // gone another way (died, a teleport): no longer in there
             DropIcon(g_in.exitIcon);
             g_in = Inside{};
@@ -661,9 +700,23 @@ void UpdateDoors() {
             return;
         }
         ShutDoors();  // the host's state of them may have opened one again
+        // the interior's own door (shut by us): its marker's place, where the way out was in the game (03.11)
+        if (!g_in.hasExit) {
+            auto* pool = Ref<CPoolHeader*>(kEnexPool);
+            float best = 40.0f;
+            for (int i = 0; pool && i < pool->size; ++i) {
+                uintptr_t e = (uintptr_t)pool->objects + (uintptr_t)i * 0x3C;
+                if (pool->byteMap[i] < 0 || !IsPrivateDoor(e)) continue;
+                const float* r = &Ref<float>(e + 0x08);  // m_recEntrance, then m_fEntranceZ
+                V3 c{(r[0] + r[2]) * 0.5f, (r[1] + r[3]) * 0.5f, Ref<float>(e + 0x18) + 1.0f};
+                if (float d = Flat(c, at); d < best) best = d, g_in.exitAt = c, g_in.hasExit = true;
+            }
+            if (g_in.hasExit) DropIcon(g_in.exitIcon), LOGI("Homes: the way out at the interior's door, %.1f m from where we came in", best);
+        }
+        if (g_in.hasExit) at = g_in.exitAt;
         if (!g_in.exitIcon) g_in.exitIcon = MakeIcon(kModelArrow, {at.x, at.y, at.z - 0.2f}, in.area);
         Spin(g_in.exitIcon);
-        float d = Dist(p, at);
+        float d = std::fabs(p.z - at.z) < 2.0f ? Flat(p, at) : 99.0f;
         if (d > kArm) g_in.armed = true;
         if (onFoot && g_in.armed && d < kDoorReach && !g_trip.stage) {
             g_in.armed = false;
@@ -762,16 +815,17 @@ void Render() {
         if (FindPlayerPed(0)->AreaCode() == 0) {
             for (size_t i = 0; i < g_own.houses.size(); ++i) {
                 const House& h = g_own.houses[i];
-                if (Dist(p, h.door) < 25.0f)
-                    Label(h.door, (int)i == g_own.main ? TR("Ваш дом (главный)", "Your house (main)") : TR("Ваш дом", "Your house"), 0xFF8CB4FF);
+                if (Dist(p, DoorSpot(h)) < 25.0f)
+                    Label(DoorSpot(h), (int)i == g_own.main ? TR("Ваш дом (главный)", "Your house (main)") : TR("Ваш дом", "Your house"), 0xFF8CB4FF);
                 if (Dist(p, DiskSpot(h)) < 12.0f) Label(DiskSpot(h), TR("Сохранить игру", "Save the game"), 0xFFDCDCE6);
             }
             for (auto& [id, list] : g_others)
                 for (const House& h : list)
-                    if (Dist(p, h.door) < 25.0f) Label(h.door, Format(TR("Дом: %s", "%s's house"), Net().PeerName(id).c_str()), 0xFFDCDCE6);
+                    if (Dist(p, DoorSpot(h)) < 25.0f) Label(DoorSpot(h), Format(TR("Дом: %s", "%s's house"), Net().PeerName(id).c_str()), 0xFFDCDCE6);
         } else if (g_in.on) {
             const Interior& in = kInteriors[g_in.house.interior];
-            if (Dist(p, {in.x, in.y, in.z}) < 15.0f) Label({in.x, in.y, in.z}, TR("Выход", "Way out"), 0xFFDCDCE6);
+            V3 at = g_in.hasExit ? g_in.exitAt : V3{in.x, in.y, in.z};
+            if (Dist(p, at) < 15.0f) Label(at, TR("Выход", "Way out"), 0xFFDCDCE6);
         }
     }
     if (NowMs() < g_panelUntil) RenderPanel();
@@ -821,6 +875,7 @@ void MarkHouse() {
     h.zone = ZoneName(p);
     if (h.zone.empty()) h.zone = CityName(h.city);
     h.interior = (uint8_t)FreeInterior(-1, -1);
+    FindIcon(h);
     if (g_own.houses.empty()) return AddHouse(h);
     int type = ZoneType();
     h.paid = HousePrice(type, h.city);

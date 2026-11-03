@@ -1,5 +1,12 @@
 ## Novo nesta versão
 
+- **Casas dos jogadores:**
+  - A casinha azul de entrada fica na porta, encostada na parede, como as marcações amarelas do jogo. As casas já
+    marcadas acham a porta sozinhas na próxima vez que você chegar perto.
+  - Lá dentro, a seta de saída fica na porta do próprio interior, onde ficava a marcação amarela.
+
+## Da versão 1.22.2
+
 - **`/lote`:** grava o terreno em volta de onde você está (o chão, o mar e os prédios do mapa) no arquivo
   `coop\lote.txt`. É o primeiro passo da casa do Charlie Harper na praia.
 
