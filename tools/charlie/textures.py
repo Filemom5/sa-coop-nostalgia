@@ -175,6 +175,29 @@ def siding(seed):
     return np.clip(img, 0, 255)
 
 
+def lacquer(seed):
+    """the piano's black: a little light across it, as if glossy"""
+    size = 64
+    yy, xx = np.mgrid[0:size, 0:size] / size
+    v = 18 + 26 * np.exp(-((xx - 0.3) ** 2) / 0.02) + 6 * noise(size, 20, seed)
+    return np.clip(np.repeat(v[..., None], 3, -1) * np.array([1.0, 1.0, 1.08]), 0, 255)
+
+
+def keys():
+    """one octave of a keyboard, across (u), the keys' length down (v): 7 white keys, 5 black (to 0.62 of it)"""
+    w, h = 112, 64
+    im = np.full((h, w, 3), 236.0)
+    kw = w / 7
+    for i in range(1, 7):
+        im[:, int(i * kw) - 1:int(i * kw) + 1] = 120
+    for c in (1, 2, 4, 5, 6):  # the black keys sit across the gaps before keys 1, 2, 4, 5, 6
+        x = c * kw
+        im[:int(h * 0.62), int(x - kw * 0.3):int(x + kw * 0.3)] = 22
+    out = np.zeros((128, 128, 3))
+    big = np.asarray(Image.fromarray(im.astype(np.uint8)).resize((128, 128), Image.LANCZOS), float)
+    return big
+
+
 def make():
     """{name: (rgb array, size)} in the order the header gets them"""
     return {
@@ -188,6 +211,8 @@ def make():
         "nch_riser": talavera(81),
         "nch_sand": tint((206, 182, 136), fbm(256, seed=91) * 0.6 + noise(256, 100, 92) * 0.6, 0.08),
         "nch_siding": siding(101),
+        "nch_black": np.asarray(Image.fromarray(lacquer(111).astype(np.uint8)).resize((128, 128)), float),
+        "nch_keys": keys(),
     }
 
 
@@ -254,6 +279,8 @@ if __name__ == "__main__":
         im = np.zeros((256, 256, 3))
         im[:] = np.tile(back, (256 // back.shape[0], 256 // back.shape[1], 1))
         tiles_.append(im)
-    sheet = np.concatenate([np.concatenate(tiles_[i:i + 5], 1) for i in range(0, len(tiles_), 5)], 0)
+    while len(tiles_) % 6:
+        tiles_.append(np.zeros((256, 256, 3)))
+    sheet = np.concatenate([np.concatenate(tiles_[i:i + 6], 1) for i in range(0, len(tiles_), 6)], 0)
     Image.fromarray(sheet.astype(np.uint8)).save(out / "textures.png")
     print("out/textures.png:", ", ".join(tex))

@@ -21,6 +21,11 @@ dá para entrar e sair andando, sem teleporte.
 - **Luz:** nas cores dos vértices, de dia e de noite, como nos prédios do jogo. O jogo dobra essas cores, então 128 é a
   textura como ela é. Por isso as cores da 1.23.0 saíam estouradas. A luz de cada canto vem de quanto céu ele vê: os
   cantos e o interior ficam mais escuros de dia, e à noite tem luz quente dentro.
+- **Móveis:** objetos do próprio jogo (sofás, poltronas, camas, criados-mudos, a cozinha com geladeira de inox e
+  fogão, a mesa redonda, os banheiros, a mesa e as espreguiçadeiras do deck, a prancha de surfe do Charlie...) nos
+  lugares da planta da série (`tools/charlie/furniture.py`). Cada jogo cria os seus quando o jogador chega a 160 m da
+  casa e tira depois de 220 m; o save do jogo não guarda. O piano de cauda o jogo não tem: é nosso, feito no modelo da
+  casa, no piso elevado perto das portas do deck.
 - **Escadas:** na colisão, uma rampa sobre os degraus (que têm 28 cm nesse tamanho), para subir andando.
 - **De longe:** o jogo mostra o LOD, só a parte de fora. A casa de perto aparece até 170 m (o bloco do jogo: 80 m).
 - **Chuva:** não chove debaixo dos telhados (um mapa de 0,5 m de onde tem telhado).
@@ -32,7 +37,7 @@ dá para entrar e sair andando, sem teleporte.
    raio de 70 m). Feito: santahouse04_law2.
 2. **Estrutura:** paredes, telhado, deck e garagem no terreno, com a colisão; o bloco antigo some. Feito (1.23.0).
 3. **Tamanho e texturas:** 1,6x, texturas e luz como as do jogo. Feito (1.24.0).
-4. **Móveis:** objetos do próprio jogo nos lugares da planta.
+4. **Móveis:** objetos do próprio jogo nos lugares da planta, e o piano. Feito (1.25.0).
 5. **Vizinhos:** repintar as casas ao redor e o muro de madeira com escada na areia.
 
 ## Código e ferramentas
@@ -44,6 +49,8 @@ dá para entrar e sair andando, sem teleporte.
   debaixo do telhado.
 - `tools/charlie/build.py model.dae lote.txt src/client/features/charlie/CharlieData.h`: o conversor (DAE → DFF, LOD,
   COL3, as texturas em DXT1, o mapa do telhado e a lista do que esconder). Grava também `tools/charlie/out/`.
+- `tools/charlie/furniture.py`: os móveis (modelo do jogo, lugar na planta, para onde olha), a planta casada com as
+  paredes do modelo, e o piano.
 - `tools/charlie/textures.py`: as texturas (`out/textures.png` para ver). `preview.py`: uma vista da casa como o jogo
   desenha (textura x cor do vértice x 2).
 - O modelo 3D não está no repositório: é o arquivo que o Vinicius recebeu (ver a licença dele antes de distribuir).

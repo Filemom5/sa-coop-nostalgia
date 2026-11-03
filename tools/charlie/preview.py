@@ -32,6 +32,8 @@ def main(out, eye, target, zcut="99", fov="55", which="day"):
     for glass_pass in (False, True):
         for i in np.where((TEX == "glass") == glass_pass)[0]:
             t = T[i]
+            if np.cross(t[1] - t[0], t[2] - t[0]) @ (eye - t.mean(0)) <= 0:
+                continue  # its back (the game does not draw it)
             rel = t - eye
             z = rel @ fwd
             if (z < 0.1).any():

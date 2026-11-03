@@ -26,6 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
+import furniture
 import textures
 
 NS = {"c": "http://www.collada.org/2005/11/COLLADASchema"}
@@ -49,7 +50,7 @@ STAIRS = [((3.55, 0.25, -0.05), (6.3, 4.0, 2.85)), ((-6.35, -7.6, -1.5), (-4.95,
 # texture: metres of the house (game size) one texture covers
 TEX_SIZE = {"nch_stucco": 3.0, "nch_plaster": 3.0, "nch_tile": 1.0, "nch_roof": 2.4, "nch_ceiling": 2.0,
             "nch_wood": 1.5, "nch_floorwood": 2.4, "nch_sand": 4.0, "nch_siding": 2.6}
-MAT_TEX = {"Color_C08": "nch_wood", "Color_M00": "nch_wood", "Wood_Veneer_02": "nch_floorwood",
+MAT_TEX = {"piano_black": "nch_black", "piano_keys": "nch_keys", "Color_C08": "nch_wood", "Color_M00": "nch_wood", "Wood_Veneer_02": "nch_floorwood",
            "Wallpaper_Stripe": "nch_plaster", "Cladding_Siding_Tan": "nch_siding", "sand": "nch_sand"}
 # what of the map is the blocks and the road: not hidden
 KEEP_MODELS = {6285, 6433, 6284, 6434, 6294, 6432, 6428, 6438}
@@ -242,14 +243,16 @@ def classify(mats, plan, normals, open_, piece_area):
         n, o = normals[i], open_[i]
         if "Glass" in m:
             out.append("glass")
+        elif m.startswith("piano"):
+            out.append(MAT_TEX[m])
         elif m == "sand":
             out.append("nch_sand")
         elif n[2] > 0.2 and o > 0.45 and zmid[i] > 2.0:
             out.append("nch_roof")
         elif abs(n[2]) < 0.05 and 0.09 < h[i] < 0.21 and (on_stairs[i] or (z[i].min() > -0.01 and z[i].max() < 0.16)):
             out.append("nch_riser")
-        elif m == "Color_C08" and n[2] < -0.2 and piece_area[i] > 2.0:
-            out.append("nch_ceiling")            # the boards between the beams
+        elif m == "Wood_Veneer_02" and n[2] < -0.2:
+            out.append("nch_ceiling")            # the boards between the beams, from below: light
         elif m in MAT_TEX:
             out.append(MAT_TEX[m])
         elif n[2] > 0.2:
@@ -264,10 +267,14 @@ def classify(mats, plan, normals, open_, piece_area):
     return np.array(out)
 
 
-def uvs(tris, normals, tex, plan):
-    """per corner: planar, by the way the face looks; the risers: one row of tiles each"""
+def uvs(tris, normals, tex, given):
+    """per corner: planar, by the way the face looks; the risers: one row of tiles each; given ones (not NaN) as they
+    are"""
     uv = np.zeros(tris.shape[:2] + (2,))
     for i, (t, n, k) in enumerate(zip(tris, normals, tex)):
+        if not np.isnan(given[i, 0, 0]):
+            uv[i] = given[i]
+            continue
         a = np.abs(n)
         if k == "nch_riser":
             hz = (t[:, 2].max() - t[:, 2].min()) or 0.3
@@ -527,10 +534,26 @@ def hidden(lote, tris, tex):
 
 def main(dae, lote, header=None):
     tris, mats, plan = faces(load(dae))
+    off = np.array([tris[0, 0, 0] - plan[0, 0, 0] * SCALE, tris[0, 0, 1] - plan[0, 0, 1] * SCALE, FLOOR - ORIGIN[2]])
+    # the furniture: where it goes (the game's objects: the mod puts them); the piano: ours, in the model
+    pieces = furniture.place(plan, mats, SCALE)
+    n_house = len(tris)
+    pu, pv, phead = furniture.PIANO
+    pxy = furniture.to_plan(pu, pv, "ground")
+    pnorm = np.cross(plan[:, 1] - plan[:, 0], plan[:, 2] - plan[:, 0])
+    pnorm /= np.maximum(np.linalg.norm(pnorm, axis=1), 1e-9)[:, None]
+    pz = furniture.floor_z(plan, pnorm, mats, pxy, "ground")
+    ptris, pmats, puv = furniture.piano(pxy * SCALE + off[:2], pz * SCALE + off[2], phead)
+    given = np.full(tris.shape[:2] + (2,), np.nan)
+    tris = np.concatenate([tris, ptris])
+    mats = np.concatenate([mats, pmats])
+    plan = np.concatenate([plan, (ptris - off) / SCALE])
+    given = np.concatenate([given, puv])
     # the plate of sand: the old block's box, under the house
     tris = np.concatenate([tris, plate(OLD_BOX, GROUND, ORIGIN)])
     plan = np.concatenate([plan, np.zeros((2, 3, 3)) - 9])
     mats = np.concatenate([mats, ["sand", "sand"]])
+    given = np.concatenate([given, np.full((2, 3, 2), np.nan)])
     normals = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])
     normals /= np.linalg.norm(normals, axis=1)[:, None]
     sky = Sky(tris)
@@ -551,7 +574,7 @@ def main(dae, lote, header=None):
     for sign, open_, corner in ((1, f_open, f_corner), (-1, b_open, b_corner)):
         n = normals * sign
         tex = classify(mats, plan, n, open_, piece_area)
-        uv = uvs(tris, n, tex, plan)
+        uv = uvs(tris, n, tex, given)
         day, night = light(n, corner, tex == "glass")
         t = tris if sign > 0 else tris[:, [0, 2, 1]]
         if sign < 0:
@@ -566,8 +589,7 @@ def main(dae, lote, header=None):
     # the collision: the faces, and the stairs' ramps
     nplan = np.cross(plan[:, 1] - plan[:, 0], plan[:, 2] - plan[:, 0])
     nplan /= np.maximum(np.linalg.norm(nplan, axis=1), 1e-9)[:, None]
-    ramp = ramps(plan[:-2], tris[:-2], nplan[:-2])
-    off = np.array([tris[0, 0, 0] - plan[0, 0, 0] * SCALE, tris[0, 0, 1] - plan[0, 0, 1] * SCALE, FLOOR - ORIGIN[2]])
+    ramp = ramps(plan[:n_house], tris[:n_house], nplan[:n_house])
     ramp_l = ramp * SCALE + off                    # (as faces() places the plan)
     col = write_col("santahouse04_law2", 6285, np.concatenate([tris, ramp_l]) if len(ramp_l) else tris)
     # the east block: sand
@@ -609,6 +631,13 @@ def main(dae, lote, header=None):
             "struct Hidden {", "    int model;", "    float x, y;", "};",
             "inline constexpr Hidden kHidden[] = {"] + \
            ["    {%d, %.3ff, %.3ff}," % h for h in hide] + ["};", "",
+            "// the furniture: the game's objects (model, world x, y, z of the floor under it + how high on what is"
+            " under it, heading in degrees); the mod puts each with its collision's bottom there",
+            "struct Piece {", "    int model;", "    float x, y, z, heading;", "};",
+            "inline constexpr Piece kFurniture[] = {"] + \
+           ["    {%d, %.3ff, %.3ff, %.3ff, %.1ff},  // %s" % (m, x * SCALE + off[0] + ORIGIN[0], y * SCALE + off[1] + ORIGIN[1],
+                                                      z * SCALE + off[2] + ORIGIN[2] + h, hd, what)
+            for m, what, x, y, z, hd, h in pieces] + ["};", "",
             "// the textures (textures.py), DXT1, square", "struct Texture {", "    const char* name;", "    int size;",
             "    const unsigned char* dxt1;", "};"]
     names = []

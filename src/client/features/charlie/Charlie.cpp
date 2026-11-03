@@ -10,6 +10,9 @@
 //  * their textures (stucco, clay roof tiles, terracotta floor, the ceiling's planks, Spanish tiles on the stairs...)
 //    are ours too: made from CharlieData.h's (DXT1) and put in the blocks' texture dictionaries (bev_law2, near;
 //    welod_law2, far, smaller) as these load (shared/game/TxdLoad), before the models that use them;
+//  * the furniture: the game's own objects (sofas, beds, the kitchen, the bathrooms, the deck's table and lounge
+//    chairs...) where the show's floor plan has them, made in each game as its player comes near (within 160 m) and
+//    taken away again past 220 m; not kept by the game's saves. The grand piano is ours, in the house's model;
 //  * the palms, bushes and the lifebuoy of the map that would stand in it are hidden (and walked through): again
 //    whenever that part of the map loads anew;
 //  * no rain under its roofs: CCullZones::CamNoRain and PlayerNoRain answer yes there.
@@ -22,6 +25,7 @@
 #include "features/charlie/CharlieData.h"
 #include "shared/game/Game.h"
 #include "shared/game/ModelSwap.h"
+#include "shared/game/Script.h"
 #include "shared/game/TxdLoad.h"
 #include "shared/lib/core/Core.h"
 #include "shared/lib/memory/Memory.h"
@@ -30,6 +34,7 @@ namespace coop::charlie {
 
 namespace {
 using namespace game;
+using game::script::Cmd;
 
 constexpr uint32_t kHouseModel = 6285, kLodModel = 6433, kEastModel = 6284, kEastLodModel = 6434;  // LAw2.ide
 constexpr const char* kHouseName = "santahouse04_law2";
@@ -220,6 +225,54 @@ void Hide(uintptr_t poolAddr, size_t elem) {
     }
 }
 
+// ---------------------------------------------------------------- the furniture
+constexpr float kFurnishIn = 160.0f, kFurnishOut = 220.0f;  // from the house's middle
+constexpr float kMidX = 273.4f, kMidY = -1764.2f;
+constexpr int kFurnishPerFrame = 6;
+constexpr size_t kPieces = sizeof data::kFurniture / sizeof data::kFurniture[0];
+int g_piece[kPieces] = {};  // their objects' handles (0: not made)
+bool g_furnished = false;
+
+void Furnish() {
+    int made = 0;
+    bool all = true;
+    for (size_t i = 0; i < kPieces && made < kFurnishPerFrame; ++i) {
+        if (g_piece[i] && GetObject(g_piece[i])) continue;
+        g_piece[i] = 0;
+        const data::Piece& p = data::kFurniture[i];
+        if (!IsObjectModel(p.model)) continue;  // not in this game's files
+        all = false;
+        if (!IsModelLoaded(p.model)) {
+            RequestModel(p.model);
+            continue;
+        }
+        if (!HasRoom(ObjectPool(), kKeepObjects, "object")) return;
+        int h = 0;
+        Cmd(0x0107).I(p.model).F(p.x).F(p.y).F(p.z).Out(&h).Run();  // CREATE_OBJECT: its bottom at z
+        CObject* o = h ? GetObject(h) : nullptr;
+        if (!o) continue;
+        // OBJECT_MISSION2: the game's saves keep only OBJECT_MISSION ones (a save would bring a copy back)
+        Field<uint8_t>(o, 0x13C) = 6;
+        Cmd(0x0177).I(h).F(p.heading).Run();  // SET_OBJECT_HEADING
+        Cmd(0x0550).I(h).I(1).Run();          // FREEZE_OBJECT_POSITION: a chair is not knocked over
+        g_piece[i] = h;
+        ++made;
+    }
+    if (all && !made && !g_furnished) {
+        g_furnished = true;
+        for (const data::Piece& p : data::kFurniture) MarkModelNotNeeded(p.model);
+        LOGI("Charlie: the house furnished (%zu pieces)", kPieces);
+    }
+}
+
+void Unfurnish() {
+    for (int& h : g_piece) {
+        if (h && GetObject(h)) Cmd(0x0108).I(h).Run();  // DELETE_OBJECT
+        h = 0;
+    }
+    g_furnished = false;
+}
+
 class Charlie : public Module {
 public:
     const char* Name() const override { return "Charlie"; }
@@ -236,13 +289,26 @@ public:
              IsGames(kEastModel, kEastName) ? "game's" : "other", IsGames(kEastLodModel, kEastLodName) ? "game's" : "other");
         if (void* mi = g_ours ? ModelInfo(kHouseModel) : nullptr) Ref<float>((uintptr_t)mi + 0x18) = kDrawDistance;
         m_next = 0;
+        for (int& h : g_piece) h = 0;  // a new game: the old one's objects are gone
+        g_furnished = false;
+    }
+    void OnGameShutdown() override {
+        for (int& h : g_piece) h = 0;
+        g_furnished = false;
     }
     void OnPostProcess() override {
-        if (!g_ours || !core::IsPlayerReady() || TimeMs() < m_next) return;
-        m_next = TimeMs() + 1000;
+        if (!g_ours || !core::IsPlayerReady()) return;
         CPlayerPed* me = FindPlayerPed(0);
         if (!me) return;
         CVector p = me->GetPosition();
+        float d = std::hypot(p.x - kMidX, p.y - kMidY);
+        if (d < kFurnishIn && me->AreaCode() == 0) {
+            if (!g_furnished) Furnish();
+        } else if (d > kFurnishOut) {
+            if (g_furnished || g_piece[0]) Unfurnish();
+        }
+        if (TimeMs() < m_next) return;
+        m_next = TimeMs() + 1000;
         if (std::hypot(p.x - kX, p.y - kY) > 400.0f) return;
         Hide(0xB74498, 0x38);                        // CPools::ms_pBuildingPool
         Hide(addr::ObjectPool, kObjectPoolElemSize);  // the lifebuoy is an object (from a dummy)

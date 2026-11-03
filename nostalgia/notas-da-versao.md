@@ -1,5 +1,13 @@
 ## Novo nesta versão
 
+- **Casa do Charlie Harper mobiliada:** sofás e poltronas na sala, o piano de cauda preto perto das portas do deck,
+  mesa de centro, luminárias e plantas; a cozinha com geladeira de inox, fogão, pia e a mesa redonda; a sala de TV; os
+  quartos com camas e criados-mudos; os banheiros; a mesa e as espreguiçadeiras do deck; e a prancha de surfe do
+  Charlie. Tudo nos lugares da planta da série.
+- O teto da sala ficou com as tábuas claras entre as vigas escuras, como na série.
+
+## Da versão 1.24.0
+
 - **Casa do Charlie Harper, segunda versão:**
   - **Maior:** 1,6x, no tamanho das pessoas e das portas do jogo. Ela ocupa também parte do terreno vizinho do lado
     leste (que virou areia) e avança para a praia.
