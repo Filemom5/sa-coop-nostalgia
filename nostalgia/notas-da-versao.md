@@ -1,5 +1,23 @@
 ## Novo nesta versão
 
+- **Casa do Charlie Harper, quarta versão:**
+  - **Portões:** portão verde no alto dos novos degraus que sobem da rua até o pátio da porta da frente, e o portão
+    dos carros na rampa, com pilares e lanternas.
+  - **Garagem:** a rampa dos carros segue reta até a garagem (sem escada no caminho), e as duas portas da garagem
+    ficam abertas, enroladas debaixo do teto.
+  - **Calçada larga:** a casa recuou do muro da rua, com espaço para passar, vasos de plantas e lanternas.
+  - **Portas** em todas as entradas e nos cômodos, abertas para dar para passar, incluindo a entrada lateral.
+  - **Telhados de telha** em todas as partes da casa, como nas imagens de referência. Os terraços de cima ficam com
+    muro em volta.
+  - **Embaixo da casa, do lado da praia:** estacas de madeira abertas. A cerca branca e as escadas no muro saíram.
+  - **Detalhes:** pergolado no pátio da frente, lanternas de ferro acesas à noite, corrimão de ferro na escada,
+    rodapé de madeira, vidros escuros nas janelas.
+  - **Decoração:** quadros, tapetes e plantas dentro; mesa e cadeiras no terraço de cima e no quintal.
+  - O pau que segura a tampa do piano agora fica embaixo da tampa, e a mesa do deck tem tampo.
+  - **`/casa marcar` no terreno marca esta casa:** a própria casa é o interior, com o disquete de salvar lá dentro.
+
+## Da versão 1.26.0
+
 - **Casa do Charlie Harper, terceira versão:**
   - **Texturas de volta:** na versão passada a casa e o piano ficavam brancos. Agora as texturas aparecem.
   - **Como uma casa de Malibu:** a casa fica num terreno elevado. Do lado do mar tem um muro de madeira com cerca

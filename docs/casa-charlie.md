@@ -11,10 +11,24 @@ dá para entrar e sair andando, sem teleporte.
   `Cut.cpp`); a casa de salvar (a porta em 315,7, -1769,8) fica como é. O lado oeste encosta no vizinho e a frente fica
   onde era a do bloco antigo. Palmeiras, arbustos e a boia do mapa que ficariam dentro da casa somem.
 - **O terreno, como as casas de Malibu:** a casa e o quintal ficam num terreno elevado, com o piso a 5,3 m (1,7 m acima
-  da rua e 2,1 m acima da areia), calçado de pedra. Para o mar, um muro de madeira (bulkhead) com cerca branca e escadas
-  de madeira até a areia. A parte da casa que avança sobre a praia fica sobre estacas de madeira. Para a rua e os
-  vizinhos, um muro de reboco com capa de terracota. Os carros entram por um portão verde no alto de uma rampa que sobe
-  da rua (no lado oeste, até a garagem). A escada do deck chega na areia.
+  da rua e 2,1 m acima da areia), calçado de pedra. A casa fica 3,8 m atrás do muro da rua, com uma calçada larga na
+  frente, vasos de plantas e lanternas. A parte da casa que avança sobre a praia fica sobre estacas de madeira, aberta
+  embaixo, como nas imagens de referência. Em volta do quintal (rua, vizinhos e praia), um muro de reboco com capa de
+  terracota. Da rua sobem: os degraus até o pátio da porta da frente (portão verde no alto, pilares com lanternas) e a
+  rampa dos carros, no lado oeste (portão verde), que segue reta até as duas portas da garagem. A escada do deck chega
+  na areia.
+- **Portas:** as folhas das portas voltaram, abertas a 90° para o lado que tem espaço (dá para passar). As portas da
+  garagem ficam enroladas debaixo do teto, abertas para os carros. As de vidro de correr ficam com uma folha corrida.
+- **Telhados:** telhado de quatro águas de telha de barro em todas as partes de teto plano do modelo (cada parte é
+  coberta pelos telhados dos seus maiores retângulos, um sobre o outro, `tools/charlie/roofs.py`), menos os dois
+  terraços do andar de cima, que ficam com piso de lajota e um muro com capa em volta. O beiral sai da parede onde o
+  ar é aberto.
+- **Detalhes:** pergolado de madeira escura no pátio da porta da frente; lanternas de ferro nas paredes ao lado das
+  portas e nos pilares dos portões, acesas à noite (luzes 2dfx no modelo e a luz delas nas cores de noite);
+  corrimão de ferro na escada da sala; rodapé de madeira nas paredes de dentro; vidro escuro nas janelas.
+- **Como casa do `/casa`:** `/casa marcar` em qualquer ponto do terreno marca esta casa: a própria casa é o interior
+  (entra-se pelas portas dela, sem teleporte), o disquete de salvar fica dentro, ao lado da porta da frente, e o
+  `/home` leva para o pátio da porta. Só um jogador do grupo pode tê-la, como os interiores.
 - **Tamanho:** 1,6x o do modelo, porque as pessoas e as portas do jogo são maiores que as de verdade: as portas ficam
   com 3,2 m, como as portas grandes do próprio jogo, e a casa com 58,7 x 35,4 m.
 - **Modelo:** o `model.dae` (SketchUp, em metros), virado com o deck e as portas de vidro para o mar e a porta da frente
@@ -50,7 +64,10 @@ dá para entrar e sair andando, sem teleporte.
 4. **Móveis:** objetos do próprio jogo nos lugares da planta, e o piano. Feito (1.25.0).
 5. **Terreno elevado, estacas, muro de madeira, muro da rua, portas de vidro, cores das referências; a casa de salvar
    do lado de volta.** Feito (1.26.0).
-6. **Vizinhos:** repintar as casas ao redor, levá-las até a mesma linha da casa na praia, com sacadas, e o mesmo muro
+6. **Casa pronta:** portões, rampa reta até a garagem, calçada larga, estacas abertas, portas, telhados, pergolado,
+   lanternas, corrimão, decoração e o `/casa marcar` nela. Feito (1.27.0).
+7. **Garagem que abre e fecha** como a do CJ (precisa de um modelo novo no jogo para a porta).
+8. **Vizinhos:** repintar as casas ao redor, levá-las até a mesma linha da casa na praia, com sacadas, e o mesmo muro
    de madeira na frente delas.
 
 ## Código e ferramentas
@@ -65,10 +82,12 @@ dá para entrar e sair andando, sem teleporte.
   debaixo do telhado.
 - `tools/charlie/build.py model.dae lote.txt src/client/features/charlie/CharlieData.h`: o conversor (DAE → DFF, LOD,
   COL3, as texturas em DXT1, o mapa do telhado e a lista do que esconder). Grava também `tools/charlie/out/`.
-- `tools/charlie/lot.py`: o terreno elevado, o bulkhead com a cerca e as escadas, as estacas, o muro da rua, a rampa e
-  o portão.
+- `tools/charlie/lot.py`: o terreno elevado, as estacas, os muros, a rampa, os degraus, os portões e as lanternas dos
+  pilares. `roofs.py`: os telhados e os muros dos terraços. `details.py`: as portas abertas, a garagem aberta e o
+  corrimão.
+- `src/client/shared/game/WalkIn.h`: a casa que é o próprio interior, que o `/casa` (features/home) usa.
 - `tools/charlie/furniture.py`: os móveis (modelo do jogo, lugar na planta, para onde olha), a planta casada com as
-  paredes do modelo, e o piano.
+  paredes do modelo, a decoração (quadros, tapetes, plantas, a mesa do terraço e do quintal) e o piano.
 - `tools/charlie/textures.py`: as texturas (`out/textures.png` para ver). `preview.py`: uma vista da casa como o jogo
   desenha (textura x cor do vértice x 2).
 - O modelo 3D não está no repositório: é o arquivo que o Vinicius recebeu (ver a licença dele antes de distribuir).

@@ -29,6 +29,7 @@
 #include "shared/game/ModelSwap.h"
 #include "shared/game/Script.h"
 #include "shared/game/TxdLoad.h"
+#include "shared/game/WalkIn.h"
 #include "shared/lib/core/Core.h"
 #include "shared/lib/memory/Memory.h"
 
@@ -234,7 +235,7 @@ void Hide(uintptr_t poolAddr, size_t elem) {
 
 // ---------------------------------------------------------------- the furniture
 constexpr float kFurnishIn = 160.0f, kFurnishOut = 220.0f;  // from the house's middle
-constexpr float kMidX = 273.4f, kMidY = -1764.2f;
+constexpr float kMidX = 273.4f, kMidY = -1766.8f;
 constexpr int kFurnishPerFrame = 6;
 constexpr size_t kPieces = sizeof data::kFurniture / sizeof data::kFurniture[0];
 int g_piece[kPieces] = {};  // their objects' handles (0: not made)
@@ -280,6 +281,10 @@ void Unfurnish() {
     g_furnished = false;
 }
 
+// for the group's homes (/casa marcar here: the house itself, its save disk inside)
+bool InPlace() { return g_ours; }
+bool OnLot(float x, float y) { return x > kX + data::kLotX0 && x < kX + data::kLotX1 && y > kY + data::kLotY0 && y < kY + data::kLotY1; }
+
 class Charlie : public Module {
 public:
     const char* Name() const override { return "Charlie"; }
@@ -287,6 +292,11 @@ public:
         game::AddModelSwap(&Model);
         game::AddCollisionSwap(&Collision);
         game::AddTxdLoaded(&TxdLoaded);
+        game::walkin::House h;
+        h.inPlace = &InPlace, h.onLot = &OnLot;
+        h.doorX = data::kDoorX, h.doorY = data::kDoorY, h.doorZ = data::kDoorZ, h.heading = data::kDoorHeading;
+        h.diskX = data::kDiskX, h.diskY = data::kDiskY, h.diskZ = data::kDiskZ;
+        game::walkin::Set(h);
         mem::HookFn(0x72DDB0, &HookCamNoRain, &g_origCamNoRain, "CCullZones::CamNoRain");
         mem::HookFn(0x72DDC0, &HookPlayerNoRain, &g_origPlayerNoRain, "CCullZones::PlayerNoRain");
     }

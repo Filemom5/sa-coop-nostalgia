@@ -34,6 +34,7 @@
 #include "shared/config/Config.h"
 #include "shared/game/Game.h"
 #include "shared/game/Script.h"
+#include "shared/game/WalkIn.h"
 #include "shared/lib/core/Core.h"
 #include "shared/ui/chat/Chat.h"
 #include "shared/ui/renderer/Renderer.h"
@@ -85,8 +86,12 @@ const Interior kInteriors[] = {
     {5, 1262.1451f, -785.3298f, 1091.9063f, I_MADDOGG, 0}, {3, 2496.05f, -1693.926f, 1014.742f, I_JOHNSON, 0},
 };
 constexpr int kInteriorCount = (int)(sizeof kInteriors / sizeof kInteriors[0]);
+// a house that is its own interior: one walks in through its doors (Charlie Harper's, features/charlie), the save disk
+// inside. One of the group's at a time, as an interior is
+constexpr uint8_t kWalkIn = 200;
 
 std::string InteriorName(int i) {
+    if (i == kWalkIn) return TR("Дом Чарли Харпера", "Charlie Harper's house");
     if (i < 0 || i >= kInteriorCount) return "?";
     const Interior& in = kInteriors[i];
     switch (in.kind) {
@@ -218,7 +223,10 @@ int32_t& Money() { return PlayerInfos()[0].money; }
 V3 DoorSpot(const House& h) { return h.hasIcon ? h.icon : h.door; }
 // the door's street side, where one comes out; the disk at its right
 V3 OutSpot(const House& h) { return Add(DoorSpot(h), Ahead(h.heading), -1.4f); }
-V3 DiskSpot(const House& h) { return Add(Add(DoorSpot(h), Right(h.heading), 1.6f), Ahead(h.heading), -0.9f); }
+V3 DiskSpot(const House& h) {
+    if (const game::walkin::House* w = h.interior == kWalkIn ? game::walkin::Get() : nullptr) return {w->diskX, w->diskY, w->diskZ};
+    return Add(Add(DoorSpot(h), Right(h.heading), 1.6f), Ahead(h.heading), -0.9f);
+}
 
 // The wall ahead of where the house was marked (the player faced its door): the icon 0.7 m in front of it, as the game's
 // own yellow markers stand at a building's door, not where the player stood (03.11). Nothing within 5 m: half a metre on.
@@ -343,7 +351,7 @@ House ReadHouse(Reader& r, int version = 2) {
     for (int i = 0; i < n && r.Ok(); ++i) h.zone += (char)r.U8();
     h.city = r.U8();
     if (version >= 2) h.hasIcon = r.U8() != 0, h.icon.x = r.F32(), h.icon.y = r.F32(), h.icon.z = r.F32();
-    if (h.interior >= kInteriorCount) h.interior = 0;
+    if (h.interior >= kInteriorCount && h.interior != kWalkIn) h.interior = 0;
     return h;
 }
 
@@ -643,7 +651,8 @@ void UpdateDoors() {
             SendOwn();
         }
         V3 at = DoorSpot(h);
-        if (!ic.door) ic.door = MakeIcon(kModelHouse, {at.x, at.y, at.z - 0.35f}, 0), ic.doorArmed = Dist(p, at) > kArm;
+        bool walkIn = h.interior == kWalkIn;  // its own doors lead in
+        if (!ic.door && !walkIn) ic.door = MakeIcon(kModelHouse, {at.x, at.y, at.z - 0.35f}, 0), ic.doorArmed = Dist(p, at) > kArm;
         V3 disk = DiskSpot(h);
         if (!ic.disk) ic.disk = MakeIcon(kModelDisk, {disk.x, disk.y, disk.z - 0.35f}, 0), ic.diskArmed = Dist(p, disk) > kArm;
         Spin(ic.door), Spin(ic.disk);
@@ -651,7 +660,7 @@ void UpdateDoors() {
         if (dd > kArm) ic.doorArmed = true;
         if (ds > kArm) ic.diskArmed = true;
         if (!onFoot || g_trip.stage) continue;
-        if (ic.doorArmed && dd < kDoorReach) {
+        if (!walkIn && ic.doorArmed && dd < kDoorReach) {
             ic.doorArmed = false;
             if (!FreeToGo(true)) continue;
             const Interior& in = kInteriors[h.interior];
@@ -676,6 +685,7 @@ void UpdateDoors() {
                 continue;
             }
             V3 at = DoorSpot(h);
+            if (h.interior == kWalkIn) continue;  // they walk in through its doors
             if (!ic.door) ic.door = MakeIcon(kModelHouse, {at.x, at.y, at.z - 0.35f}, 0), ic.doorArmed = Dist(p, at) > kArm;
             Spin(ic.door);
             float dd = Dist(p, at);
@@ -875,7 +885,16 @@ void MarkHouse() {
     h.zone = ZoneName(p);
     if (h.zone.empty()) h.zone = CityName(h.city);
     h.interior = (uint8_t)FreeInterior(-1, -1);
-    FindIcon(h);
+    const game::walkin::House* w = game::walkin::Get();
+    if (w && w->inPlace() && w->onLot(p.x, p.y)) {  // Charlie Harper's: the house itself, its front door
+        if (Taken(kWalkIn, -1))
+            return ui::TheChat().AddError(TR("Этот дом уже чей-то.", "This house is someone's already."));
+        h.interior = kWalkIn;
+        h.door = {w->doorX, w->doorY, w->doorZ}, h.heading = w->heading;
+        h.icon = h.door, h.hasIcon = true;
+    } else {
+        FindIcon(h);
+    }
     if (g_own.houses.empty()) return AddHouse(h);
     int type = ZoneType();
     h.paid = HousePrice(type, h.city);
@@ -1073,6 +1092,8 @@ bool Command(const std::string& cmd, const std::vector<std::string>& args) {
             g_own.main = here;
             SaveOwn();
             ui::TheChat().AddSystem(Format(TR("Главный дом: %s. /home и начало игры - сюда.", "Main house: %s. /home and the session's start come here."), h.zone.c_str()));
+        } else if (first == "interior" && h.interior == kWalkIn) {
+            ui::TheChat().AddError(TR("Этот дом и есть интерьер: заходите в его двери.", "This house is its own interior: walk in through its doors."));
         } else if (first == "interior") {
             h.interior = (uint8_t)FreeInterior(h.interior, here);
             SaveOwn();
@@ -1115,7 +1136,7 @@ public:
             bool moved = false;
             for (size_t i = 0; from < Net().MyId() && i < g_own.houses.size(); ++i)
                 for (const House& h : list)
-                    if (h.interior == g_own.houses[i].interior) g_own.houses[i].interior = (uint8_t)FreeInterior(h.interior, (int)i), moved = true;
+                    if (h.interior == g_own.houses[i].interior && h.interior != kWalkIn) g_own.houses[i].interior = (uint8_t)FreeInterior(h.interior, (int)i), moved = true;
             if (moved) SaveOwn(), SendOwn();
             LOGD("Homes: %zu houses of player %u", list.size(), from);
         });

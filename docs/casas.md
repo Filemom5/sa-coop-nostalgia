@@ -21,6 +21,8 @@ servidor. A ideia veio do servidor de RP em que o host jogava.
 - **Porta:** a casinha azul girando. Andando até ela, você entra num interior de casa do próprio jogo: as casas do roubo
   noturno, as casas compráveis e mais algumas (são 40). Cada casa do grupo recebe um interior que nenhuma outra tem,
   para ninguém se encontrar lá dentro. A seta lá dentro leva de volta para a porta.
+- **Casa do Charlie Harper:** `/casa marcar` no terreno dela marca a própria casa: entra-se pelas portas dela, o
+  disquete fica lá dentro, ao lado da porta da frente. Só um jogador do grupo pode tê-la.
 - **Visitas:** os amigos veem a porta da sua casa ("Casa de Fulano") e podem entrar.
 - **Disquete:** do lado da porta, abre o menu de salvar do jogo, como um disquete normal. Só aparece nas suas casas.
 - **Radar:** suas casas aparecem com o ícone de casa de save.

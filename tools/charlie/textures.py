@@ -198,11 +198,42 @@ def keys():
     return big
 
 
+def plaster_storey(seed):
+    """the inside walls: cream plaster a storey high, a dark wood skirting at its foot (the bottom of the texture)"""
+    img = stucco((238, 226, 196), seed)
+    wood = planks((86, 54, 32), 1, seed + 1, gap=(60, 38, 24), grain=0.18, vertical=False)
+    k = 24  # 0.42 m of the storey's 4.48
+    img[-k:] = wood[-k:]
+    img[-k - 2:-k] = (120, 84, 54)
+    return img
+
+
+def door(seed):
+    """the doors' leaves: dark stained planks, two battens, iron studs"""
+    img = planks((92, 56, 32), 5, seed, gap=(48, 30, 20), grain=0.22)
+    yy, xx = np.mgrid[0:256, 0:256]
+    for y in (40, 216):
+        band = np.abs(yy - y) < 9
+        img[band] = img[band] * 0.78
+        for x in range(26, 256, 51):
+            img[(np.hypot(xx - x, yy - y) < 4.5)] = (30, 28, 26)
+    return img
+
+
+def glow():
+    """a lantern's glass: warm, its panes' iron bars"""
+    img = tint((250, 214, 150), noise(64, 6, 7), 0.06)
+    img[:, 30:34] = (30, 30, 30)
+    img[30:34, :] = (30, 30, 30)
+    img[:3], img[-3:], img[:, :3], img[:, -3:] = 30, 30, 30, 30
+    return np.asarray(Image.fromarray(img.astype(np.uint8)).resize((64, 64)), float)
+
+
 def make():
     """{name: (rgb array, size)} in the order the header gets them"""
     return {
         "nch_stucco": stucco((222, 200, 160), 11),      # outside: beige stucco, as the reference pictures
-        "nch_plaster": stucco((238, 226, 196), 21),     # inside: cream
+        "nch_plaster": plaster_storey(21),              # inside: cream, a storey high, its skirting
         "nch_tile": tiles((132, 64, 44), 4, (78, 58, 48), 31, jitter=0.10),  # floors: dark terracotta tiles
         "nch_roof": roof_tiles(41),
         "nch_ceiling": planks((206, 170, 118), 8, 51, grain=0.10),
@@ -216,10 +247,11 @@ def make():
         "nch_keys": keys(),
         "nch_paving": tiles((200, 182, 156), 2, (150, 136, 118), 121, jitter=0.07),
         "nch_timber": planks((132, 114, 92), 6, 131, gap=(60, 52, 44), grain=0.18),
-        "nch_under": tint((34, 30, 26), noise(256, 30, 141), 0.25),
-        "nch_white": tint((236, 234, 226), fbm(256, seed=151), 0.04),
         "nch_green": planks((62, 84, 58), 6, 161, gap=(36, 48, 34), grain=0.12),
         "nch_cap": tiles((176, 86, 54), 2, (140, 72, 48), 171, jitter=0.08),
+        "nch_door": door(181),
+        "nch_glow": glow(),
+        "nch_joist": planks((88, 72, 58), 5, 191, gap=(36, 30, 26), grain=0.18),
     }
 
 

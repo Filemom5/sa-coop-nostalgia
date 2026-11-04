@@ -46,7 +46,7 @@ PIECES = [
     (2165, "the desk by the deck's doors", 1108, 922, 180, "ground", 0),
     (1806, "its chair", 1108, 952, 0, "ground", 0),
     # ---- the deck
-    (2086, "the deck's round table", 900, 822, 0, "ground", 0),
+    (2030, "the deck's round table", 900, 822, 0, "ground", 0),
     (1811, "a chair", 868, 790, 135, "ground", 0),
     (1811, "a chair", 932, 790, 225, "ground", 0),
     (1811, "a chair", 868, 854, 45, "ground", 0),
@@ -117,6 +117,46 @@ PIECES = [
     (1645, "a lounge chair on the balcony", 530, 356, 270, "upper", 0),
     (2241, "a plant", 330, 418, 0, "upper", 0),
 ]
+
+# the decoration: the game's objects by the house's place (the block's axes, x and y of the old block's place for the
+# house's: build.py moves them with the house), not the drawing's: (model, what, x, y, where, floor, heading or the
+# wall's direction). where: "floor" (on the house's floor), "wall" (a picture, on the wall that way), "lot" (outside)
+PLANTS = (948, 949, 2001, 2010, 2241, 2244, 2245, 2247, 2251)
+FRAMES = (2257, 2259, 2261, 2263, 2266, 2268, 2270, 2276, 2281, 2283, 2286)
+DECOR = [
+    # the living room: pictures round it, plants in its corners, a bookshelf by the piano's corner
+    (FRAMES[0], "a picture", 5.0, 5.0, "wall", "ground", 90), (FRAMES[1], "a picture", 9.0, 5.0, "wall", "ground", 90),
+    (FRAMES[2], "a picture", 13.0, 5.0, "wall", "ground", 90), (FRAMES[3], "a picture", 5.0, -2.0, "wall", "ground", 180),
+    (FRAMES[4], "a picture", 5.0, 2.0, "wall", "ground", 180),
+    (2010, "a plant", 3.2, 7.6, "floor", "ground", 0), (2001, "a plant", 15.0, 7.6, "floor", "ground", 0),
+    (2245, "a plant", 3.2, -9.0, "floor", "ground", 0),
+    (2817, "a rug", 9.0, -7.5, "floor", "ground", 0),
+    # the hall by the front door and the stairs
+    (FRAMES[5], "a picture", 18.0, 2.0, "wall", "ground", 0), (2244, "a plant", 17.2, 3.0, "floor", "ground", 0),
+    (2815, "the hall's rug", 18.4, 1.5, "floor", "ground", 90),
+    # the west wing's rooms
+    (FRAMES[6], "a picture", -5.0, 4.0, "wall", "ground", 90), (FRAMES[7], "a picture", -5.0, -8.0, "wall", "ground", 270),
+    (2818, "a rug", -5.0, 2.0, "floor", "ground", 0), (2842, "a rug", -5.0, -7.0, "floor", "ground", 0),
+    (2247, "a plant", -7.8, 7.6, "floor", "ground", 0),
+    # the family room
+    (FRAMES[8], "a picture", 25.0, 5.0, "wall", "ground", 90), (2251, "a plant", 22.8, 8.6, "floor", "ground", 0),
+    # upstairs: Charlie's room
+    (FRAMES[9], "a picture", 26.0, -5.0, "wall", "upper", 90), (FRAMES[10], "a picture", 26.0, -5.0, "wall", "upper", 270),
+    (2847, "a rug", 26.0, -5.0, "floor", "upper", 0),
+    # the street's terrace upstairs: a table, chairs, plants
+    (2030, "the terrace's table", 25.0, 5.0, "floor", "upper", 0),
+    (1811, "a chair", 24.0, 4.0, "floor", "upper", 315), (1811, "a chair", 26.0, 6.0, "floor", "upper", 135),
+    (948, "a plant", 18.0, 8.4, "floor", "upper", 0), (949, "a plant", 29.6, 8.4, "floor", "upper", 0),
+    # outside: plants along the walk, by the street's wall and the house; the court; the drive; the east yard
+] + [(PLANTS[i % len(PLANTS)], "a plant by the wall", x, 11.4, "lot", "", 0) for i, x in
+     enumerate((-11.0, -6.0, -1.0, 4.0, 9.0, 14.0, 24.0, 28.0, 33.0, 38.0))] + \
+    [(PLANTS[(i + 3) % len(PLANTS)], "a plant by the house", x, 7.1, "lot", "", 0) for i, x in enumerate((-5.0, -0.5, 4.0, 14.0))] + \
+    [(949, "a plant in the court", 17.1, 6.0, "lot", "", 0), (948, "a plant in the court", 21.3, 6.0, "lot", "", 0),
+     (2010, "a plant by the side door", -9.9, -8.0, "lot", "", 0), (2001, "a plant by the side door", -9.9, 0.0, "lot", "", 0),
+     (2011, "a palm on the drive", -21.4, -4.0, "lot", "", 0), (2011, "a palm on the drive", -21.4, -12.0, "lot", "", 0),
+     (1645, "a lounge chair", 36.0, -9.0, "lot", "", 180), (1645, "a lounge chair", 38.5, -9.0, "lot", "", 180),
+     (2030, "the yard's table", 37.0, -1.5, "lot", "", 0), (1811, "a chair", 36.0, -2.5, "lot", "", 315),
+     (1811, "a chair", 38.0, -0.5, "lot", "", 135), (2241, "a plant", 41.0, 11.0, "lot", "", 0)]
 
 PIANO = (945, 960, 56.5)  # the drawing's x, y; its heading in the game (its keyboard's side to -y)
 FLIP = {1811}  # these have their front to +y (the chairs)
@@ -275,8 +315,17 @@ def piano(center, z, head):
         tris.append([tuple(c), tuple(lid[i]), tuple(lid[(i + 1) % len(lid)])])
         mats.append("piano_black")
         uvs.append([(0.5, 0.5), (0, 0), (1, 0)])
-    # the lid's stick
-    box(0.55 * k, 0.15 * k, zt, 0.58 * k, 0.18 * k, zt + 0.62 * k, "piano_black")
+    # the lid's stick: from the case's rim on the treble side up to the lid's underside near its edge
+    sx0, sy = outline[:, 0].max() - 0.05 * k, outline[:, 1].min() + 0.30 * k
+    dx = 1.34 * k  # where along the lid (from its hinge) it holds it
+    sx1, sz1 = left + dx * np.cos(a), zt + dx * np.sin(a) - 0.03
+    d = 0.015 * k
+    for (ax_, az), (bx_, bz) in (((sx0 - d, zt), (sx1 - d, sz1)), ((sx0 + d, zt), (sx1 + d, sz1))):
+        quad((ax_, sy - d, az), (bx_, sy - d, bz), (bx_, sy + d, bz), (ax_, sy + d, az), "piano_black")
+        quad((ax_, sy + d, az), (bx_, sy + d, bz), (bx_, sy - d, bz), (ax_, sy - d, az), "piano_black")
+    for yy in (sy - d, sy + d):
+        quad((sx0 - d, yy, zt), (sx0 + d, yy, zt), (sx1 + d, yy, sz1), (sx1 - d, yy, sz1), "piano_black")
+        quad((sx0 + d, yy, zt), (sx0 - d, yy, zt), (sx1 - d, yy, sz1), (sx1 + d, yy, sz1), "piano_black")
     # the keyboard, in front
     x0, x1 = outline[:, 0].min() + 0.08 * k, outline[:, 0].max() - 0.08 * k
     y0 = outline[:, 1].min()
