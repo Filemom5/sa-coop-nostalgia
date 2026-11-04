@@ -26,7 +26,9 @@ from pathlib import Path
 
 import numpy as np
 
+import decor
 import details
+import exterior
 import furniture
 import lot
 import roofs
@@ -38,21 +40,23 @@ EAST = np.array([307.266, -1760.547, 7.625])    # santahouse02_law2, the block e
 OLD_BOX = (-22.27, -12.35, 22.27, 12.36)        # their collisions' boxes, x and y
 EAST_BOX = (-19.22, -10.71, 19.22, 10.72)
 SCALE = 1.6
-WEST, NORTH = -21.9, 8.5                        # the house's west side and front, in the block's axes (its front
+SHIFT = -4.5                                    # the lot back from the street: its wall at y 7.8, on the safe house's front line
+                                                # (the game's sidewalk reaches y 7.75), the house as far over the sand
+WEST, NORTH = -21.9, 8.5 + SHIFT                # the house's west side and front, in the block's axes (its front
                                                 # 3.8 m from the street's wall: the walk along it)
 DY = NORTH - 11.1                               # where the house went from the old block's front (the plan's numbers below)
 FLOOR = 5.3                                     # its floor: 1.7 m over the street, 2.1 over the sand (the deck's stairs reach it)
 GROUND = 3.45                                   # the plate of sand under the blocks
-LOT = (-22.2, -27.5, 42.0, 12.3)                # the lot: the old block, and the east block's west part (x, y)
-# up from the street (y 12.3): the drive (x from, to, its top's y), on to the garage's doors; the steps to the front
+LOT = (-22.2, -27.5 + SHIFT, 42.0, 12.3 + SHIFT)               # the lot: the old block, and the east block's west part (x, y)
+# up from the street (y 7.8): the drive (x from, to, its top's y), on to the garage's doors; the steps to the front
 # door's court (9 steps of 30 cm), the gate at their top
-RAMPS = [(-21.4, -14.0, 0.3, "drive"), (17.9, 20.7, 12.3 - 9 * 0.30, "steps")]
+RAMPS = [(-21.4, -14.0, 0.3 + SHIFT, "drive"), (17.9, 20.7, 12.3 + SHIFT - 9 * 0.30, "steps")]
 
 
 def beach_y(x):
     """south of it the lot is beach (the house over it on pilings): the old block's south side, the east block's; the
     drive goes on to the garage's doors"""
-    return -18.7 if x < -7.5 else (-13.8 if x > 22.2 else -12.4)
+    return SHIFT + (-18.7 if x < -7.5 else (-13.8 if x > 22.2 else -12.4))
 
 
 # the flat roofs (heights over the floor) that get a hipped roof, the upper floor's two terraces (not roofed)
@@ -84,7 +88,10 @@ STAIRS = [((3.55, 0.25, -0.05), (6.3, 4.0, 2.85)), ((-6.35, -7.6, -1.5), (-4.95,
 TEX_SIZE = {"nch_stucco": 3.0, "nch_plaster": 3.0, "nch_tile": 2.0, "nch_roof": 2.4, "nch_ceiling": 2.0,
             "nch_wood": 1.5, "nch_floorwood": 2.4, "nch_darkwood": 2.4, "nch_sand": 4.0, "nch_siding": 2.6,
             "nch_paving": 1.6, "nch_timber": 2.4, "nch_under": 3.0, "nch_white": 1.0, "nch_green": 1.6, "nch_cap": 0.8,
-            "nch_door": 1.6, "nch_glow": 0.4, "nch_joist": 2.4}
+            "nch_door": 1.6, "nch_glow": 0.4, "nch_joist": 2.4, "nch_stone": 2.0, "nch_cream": 2.0, "nch_sofa": 0.8,
+            "nch_leather": 0.8, "nch_beige": 0.8, "nch_grey": 0.8, "nch_ottoman": 0.8, "nch_cane": 0.5,
+            "nch_ytile": 0.9, "nch_steel": 1.5, "nch_copper": 1.0, "nch_bluegrey": 1.0, "nch_lightwood": 1.2,
+            "nch_leaves": 0.8, "nch_bloom": 0.8, "nch_soil": 1.5, "nch_walk": 3.0}
 PLASTER_STOREY = 2.8 * SCALE  # the inside walls' texture: a storey high, its skirting at the bottom (both floors)
 MAT_TEX = {"piano_black": "nch_black", "piano_keys": "nch_keys", "site_paving": "nch_paving",
            "site_stucco": "nch_stucco", "site_timber": "nch_timber", "site_under": "nch_under", "site_wood": "nch_wood",
@@ -287,6 +294,8 @@ def classify(mats, plan, normals, open_, piece_area):
             out.append("glass")
         elif m == "roof_tile":
             out.append("nch_roof" if n[2] > 0 else "nch_wood")  # the eaves from below: wood
+        elif m.startswith("dec_"):
+            out.append("nch_" + m[4:])            # the decoration's (decor.py, exterior.py)
         elif m in MAT_TEX and m not in geometric:
             out.append(MAT_TEX[m])
         elif deck_stairs[i] and m == "material":
@@ -359,7 +368,7 @@ def light(normals, corner_open, glass, corners=None, lamps=(), glow=None):
     sun = np.clip(normals @ SUN, 0, 1)[:, None]
     o = corner_open
     inside = np.clip(1.0 - o / 0.35, 0, 1)            # 1: deep inside
-    day = 128 * (0.56 + 0.36 * o + 0.12 * sun * o + 0.20 * inside)
+    day = 128 * (0.52 + 0.30 * o + 0.30 * sun * o + 0.20 * inside)  # the sun's side lighter: less flat
     lamp = np.array([1.0, 0.84, 0.62])
     night = 128 * ((0.30 + 0.08 * o)[..., None] * np.array([0.86, 0.9, 1.0]) + lamp * (0.52 * inside)[..., None])
     if corners is not None and len(lamps):  # the lanterns light what is near them
@@ -590,9 +599,12 @@ def hidden(lote, tris, tex):
         g[:, :-1] |= grid[:, 1:]
         grid = g
     out = []
+    OURS = {k[0] for k in furniture.PIECES} | {k[0] for k in furniture.DECOR}
     for line in Path(lote).read_text().splitlines():
         p = line.split()
         if not p or p[0] not in ("B", "O") or int(p[1]) in KEEP_MODELS:
+            continue
+        if p[0] == "O" and int(p[1]) in OURS:  # the mod's own furniture, as /lote saw it: not the map's
             continue
         model, x, y = int(p[1]), float(p[2]), float(p[3])
         lx, ly = x - ORIGIN[0], y - ORIGIN[1]
@@ -654,11 +666,12 @@ def wall_at(house, x, y, z, d):
 
 
 def decorate(house, plan, pnorm, mats, off):
-    """furniture.DECOR where it goes: (model, what, plan x, y, z, heading, height), as furniture.place gives"""
-    out = []
+    """furniture.DECOR where it goes: (model, what, plan x, y, z, heading, height), as furniture.place gives; the
+    pictures ("wall"): ours, framed prints in the model (decor.prints): their middles and the walls' normals"""
+    out, prints = [], []
     zf = FLOOR - ORIGIN[2]
     for model, what, x, y, where, floor, extra in furniture.DECOR:
-        y = y + (DY if where != "lot" else 0.0)
+        y = y + (DY if where != "lot" else SHIFT)
         if where == "lot":           # on the lot's top
             z_plan = -0.03 / SCALE
             head = extra
@@ -676,13 +689,7 @@ def decorate(house, plan, pnorm, mats, off):
                 x = w - d[0] * 0.04
             else:
                 y = w - d[1] * 0.04
-            nx, ny = -d[0], -d[1]   # its front: away from the wall (the game's objects look to -y)
-            head = np.degrees(np.arctan2(nx, -ny)) % 360
-            px, py = (x - off[0]) / SCALE, (y - off[1]) / SCALE
-            fz = furniture.floor_z(plan, pnorm, mats, np.array([px, py]), floor)
-            if fz is None:
-                continue
-            out.append((model, what, px, py, fz, head, 1.6))
+            prints.append((x, y, zc, -d[0], -d[1]))
             continue
         px, py = (x - off[0]) / SCALE, (y - off[1]) / SCALE  # on the house's floor
         fz = furniture.floor_z(plan, pnorm, mats, np.array([px, py]), floor)
@@ -690,8 +697,8 @@ def decorate(house, plan, pnorm, mats, off):
             print("  decor: %s (%d): no floor, left out" % (what, model))
             continue
         out.append((model, what, px, py, fz, extra, 0.0))
-    print("decor: %d pieces" % len(out))
-    return out
+    print("decor: %d pieces, %d prints" % (len(out), len(prints)))
+    return out, prints
 
 
 def extras(house):
@@ -764,17 +771,28 @@ def main(dae, lote, header=None):
     stris, smats, scol, kind, lamps = lot.build(tris[:n_house], zl(FLOOR), LOT, RAMPS, beach_y,
                                                 street_z=zl(3.62), sand_z=zl(3.15))
     print("lot: %d faces" % len(stris))
-    pieces += decorate(tris[:n_house], plan[:len(pnorm)], pnorm, mats[:len(pnorm)], off)
+    more, print_specs = decorate(tris[:n_house], plan[:len(pnorm)], pnorm, mats[:len(pnorm)], off)
+    pieces += more
     # the hipped roofs, the terraces' walls (roofs.py); the pergola, the lanterns on the walls
     rtris, rmats = roofs.build(tris[:n_house], zl(FLOOR), ROOF_LEVELS, TERRACES)
     etris, emats, elamps = extras(tris[:n_house])
     lamps = list(lamps) + elamps
-    add = [(stris, smats), (rtris, rmats), (etris, emats)]
-    for T_, M_ in add:
+    # our decoration (decor.py: made where the house was before the lot went back 4.3 m: moved with it), the prints
+    # where the game's frames were, the outside's details (exterior.py)
+    dtris, dmats, duv = decor.build()
+    dtris[..., 1] += SHIFT + 4.5
+    ptris_, pmats_, puv_ = decor.prints(print_specs)
+    xtris, xmats, xuv = exterior.build(tris[:n_house], mats[:n_house], zl(FLOOR), LOT, RAMPS, zl(3.62), COURT,
+                                       1.8 + SHIFT + 4.5)
+    n_two = len(tris) + len(stris) + len(rtris) + len(etris)  # what is before this shows both sides; after: one
+    add = [(stris, smats, None), (rtris, rmats, None), (etris, emats, None), (dtris, dmats, duv),
+           (ptris_, pmats_, puv_), (xtris, xmats, xuv)]
+    for T_, M_, U_ in add:
         tris = np.concatenate([tris, T_])
         mats = np.concatenate([mats, M_])
         plan = np.concatenate([plan, (T_ - off) / SCALE])
-        given = np.concatenate([given, np.full((len(T_), 3, 2), np.nan)])
+        given = np.concatenate([given, np.full((len(T_), 3, 2), np.nan) if U_ is None else U_])
+    one_side = np.arange(len(tris)) >= n_two
     normals = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])
     normals /= np.linalg.norm(normals, axis=1)[:, None]
     sand = plate((-45, -50, 65, 25), 3.0, ORIGIN)  # the beach under it all (for the light only)
@@ -801,6 +819,8 @@ def main(dae, lote, header=None):
         t = tris if sign > 0 else tris[:, [0, 2, 1]]
         if sign < 0:
             uv, day, night = uv[:, [0, 2, 1]], day[:, [0, 2, 1]], night[:, [0, 2, 1]]
+            k = ~one_side
+            t, uv, day, night, tex, open_ = t[k], uv[k], day[k], night[k], tex[k], open_[k]
         sides.append((t, uv, day, night, tex, open_))
     T, UV, DAY, NIGHT, TEX, OPEN = (np.concatenate(x) for x in zip(*sides))
     print("textures: %s" % dict(collections.Counter(TEX)))

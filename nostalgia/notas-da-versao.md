@@ -1,5 +1,26 @@
 ## Novo nesta versão
 
+- **Casa do Charlie Harper, quinta versão:**
+  - **Muro fora da calçada:** o terreno e a casa recuaram 4,5 m para a areia. O muro da rua agora fica alinhado com a
+    frente da casa vizinha e a calçada fica livre.
+  - **Fachada com mais detalhes:** base de pedra nas paredes, peitoris de terracota e vergas de madeira nas janelas,
+    venezianas nas janelas da frente, viga de madeira escura entre os andares, pilastras de pedra no muro da rua,
+    canteiros com arbustos floridos e buganvília subindo no pergolado e no pátio da porta. O chão do terreno ficou
+    cinza, o reboco mais creme e a luz do sol mais marcada, para a casa não ficar de uma cor só.
+  - **Corrimão reto:** segue a inclinação da escada, sem zigue-zague, com os nós de ferro nos balaústres.
+  - **Pôsteres e quadros:** pôsteres de jazz na parede da escada, um em cima da lareira, um de carro na cozinha e
+    quadros na sala, na sala de TV e nos outros cômodos.
+  - **Sala como a da série:** lareira com cornija, estante de livros embutida, sofá verde de frente para a lareira,
+    aparador com baú atrás, mesa de tambor, poltronas de couro e creme, tapetes, abajur e a escrivaninha perto das
+    portas do deck.
+  - **Cozinha e sala de TV como a referência:** armários brancos, bancada e azulejo amarelos, coifa de cobre,
+    geladeira de inox, mesa redonda azul com cadeiras brancas, tapete azul; sofá cinza, tapete listrado, pufe
+    vermelho, armário de madeira e poltrona de palhinha.
+  - **Prancha de surfe** no fundo da cozinha, na parede da esquerda, longe da geladeira.
+  - Os móveis do próprio mod não somem mais quando o `/lote` foi gravado com eles no lugar.
+
+## Da versão 1.27.0
+
 - **Casa do Charlie Harper, quarta versão:**
   - **Portões:** portão verde no alto dos novos degraus que sobem da rua até o pátio da porta da frente, e o portão
     dos carros na rampa, com pilares e lanternas.

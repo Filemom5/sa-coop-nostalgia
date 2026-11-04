@@ -12,7 +12,9 @@ place: what of the map stands there).
   and `preview.npz`.
 - `lot.py` (the raised lot: walls, pilings, the drive, the steps, the gates), `roofs.py` (hipped roofs over the flat
   ones, the terraces' walls), `details.py` (the doors opened, the garage's rolled up, the stairs' railing),
-  `furniture.py` (the game's objects in the house and round it, the piano): used by build.py.
+  `furniture.py` (the game's objects in the house and round it, the piano), `decor.py` (our own furniture, rugs,
+  posters and prints, the fireplace, the kitchen), `exterior.py` (the stone base, the windows' sills, lintels and
+  shutters, the storey's beam, the pilasters, the beds and the climbers, the sidewalk's strip): used by build.py.
 - `python3 textures.py`: the textures, made here (`out/textures.png`).
 - `python3 preview.py view.png "(eye)" "(target)" [height] [fov] [night]`: a view as the game draws it (texture x
   vertex colour x 2), in the block's axes (the floor at z -3.61).

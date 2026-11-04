@@ -11,7 +11,7 @@ dá para entrar e sair andando, sem teleporte.
   `Cut.cpp`); a casa de salvar (a porta em 315,7, -1769,8) fica como é. O lado oeste encosta no vizinho e a frente fica
   onde era a do bloco antigo. Palmeiras, arbustos e a boia do mapa que ficariam dentro da casa somem.
 - **O terreno, como as casas de Malibu:** a casa e o quintal ficam num terreno elevado, com o piso a 5,3 m (1,7 m acima
-  da rua e 2,1 m acima da areia), calçado de pedra. A casa fica 3,8 m atrás do muro da rua, com uma calçada larga na
+  da rua e 2,1 m acima da areia), calçado de pedra. O terreno recuou 4,5 m da rua (1.28.0): o muro da rua fica na linha da frente da casa de salvar vizinha, sem comer a calçada (a faixa que sobrou é calçada nossa, logo abaixo da do jogo). A casa fica 3,8 m atrás do muro da rua, com uma calçada larga na
   frente, vasos de plantas e lanternas. A parte da casa que avança sobre a praia fica sobre estacas de madeira, aberta
   embaixo, como nas imagens de referência. Em volta do quintal (rua, vizinhos e praia), um muro de reboco com capa de
   terracota. Da rua sobem: os degraus até o pátio da porta da frente (portão verde no alto, pilares com lanternas) e a
@@ -23,9 +23,11 @@ dá para entrar e sair andando, sem teleporte.
   coberta pelos telhados dos seus maiores retângulos, um sobre o outro, `tools/charlie/roofs.py`), menos os dois
   terraços do andar de cima, que ficam com piso de lajota e um muro com capa em volta. O beiral sai da parede onde o
   ar é aberto.
+- **Por fora (1.28.0, `tools/charlie/exterior.py`):** base de pedra nas paredes do térreo, peitoris de terracota e vergas de madeira escura nas janelas, venezianas de madeira nas janelas da frente, viga de madeira escura no nível do andar de cima, pilastras de pedra no muro da rua, canteiros com arbustos floridos na frente da casa e buganvília subindo no pergolado e no pátio. Calçada do terreno em concreto cinza, reboco creme mais quente e luz do sol mais marcada (menos chapado).
+- **Decoração nossa (1.28.0, `tools/charlie/decor.py`):** no modelo, como o piano. Sala: lareira com cornija e pôster em cima, estante embutida com livros, sofá verde de frente para a lareira, aparador com baú atrás, mesa de tambor, poltronas de couro e creme, tapetes, escrivaninha perto das portas do deck, pôsteres de jazz na parede da escada e quadros. Cozinha: armários brancos, bancada e azulejo amarelos, coifa de cobre, geladeira de inox, carrinho de madeira, mesa redonda com cadeiras brancas e tapete azul. Sala de TV: sofá cinza, tapete listrado, pufe vermelho, armário de madeira, poltrona de palhinha, aparador e quadros. Os quadros dos outros cômodos também são nossos (os do jogo não apareciam). Pôsteres desenhados aqui, no estilo dos da série.
 - **Detalhes:** pergolado de madeira escura no pátio da porta da frente; lanternas de ferro nas paredes ao lado das
   portas e nos pilares dos portões, acesas à noite (luzes 2dfx no modelo e a luz delas nas cores de noite);
-  corrimão de ferro na escada da sala; rodapé de madeira nas paredes de dentro; vidro escuro nas janelas.
+  corrimão de ferro reto na escada da sala, seguindo a inclinação dos degraus; rodapé de madeira nas paredes de dentro; vidro escuro nas janelas.
 - **Como casa do `/casa`:** `/casa marcar` em qualquer ponto do terreno marca esta casa: a própria casa é o interior
   (entra-se pelas portas dela, sem teleporte), o disquete de salvar fica dentro, ao lado da porta da frente, e o
   `/home` leva para o pátio da porta. Só um jogador do grupo pode tê-la, como os interiores.

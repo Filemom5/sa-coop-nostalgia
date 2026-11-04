@@ -33,18 +33,6 @@ SIZE = {1766: (2.75, 0.97, 1.11), 1761: (2.85, 0.98, 1.04), 1754: (0.97, 0.97, 0
 
 PIECES = [
     # ---- the living room (sunken), the piano's raised floor by the deck's doors
-    (1766, "the green sofa", 960, 1125, 90, "ground", 0),
-    (2119, "the table behind the sofa", 918, 1125, 90, "ground", 0),
-    (1822, "the round coffee table", 1040, 1112, 0, "ground", 0),
-    (2833, "the rug", 1035, 1140, 90, "ground", 0),
-    (1754, "the brown leather armchair", 1090, 1058, 224, "ground", 0),
-    (1762, "the green armchair", 1062, 1255, 0, "ground", 0),
-    (2069, "the floor lamp", 1140, 1082, 270, "ground", 0),
-    (2023, "the lamp by the sofa", 962, 1045, 90, "ground", 0),
-    (2241, "a plant", 910, 1012, 90, "ground", 0),
-    (2011, "a palm", 918, 1262, 90, "ground", 0),
-    (2165, "the desk by the deck's doors", 1108, 922, 180, "ground", 0),
-    (1806, "its chair", 1108, 952, 0, "ground", 0),
     # ---- the deck
     (2030, "the deck's round table", 900, 822, 0, "ground", 0),
     (1811, "a chair", 868, 790, 135, "ground", 0),
@@ -55,32 +43,7 @@ PIECES = [
     (1645, "a lounge chair", 1112, 792, 225, "ground", 0),
     (2096, "a rocking chair", 780, 800, 180, "ground", 0),
     # ---- the kitchen: the counter along the wall, turning at the corner; the round table
-    (2147, "the steel fridge", 1268, 815, 180, "ground", 0),
-    (2134, "a cabinet", 1295, 815, 180, "ground", 0),
-    (2339, "the stove", 1322, 815, 180, "ground", 0),
-    (2133, "a cabinet", 1349, 815, 180, "ground", 0),
-    (2134, "a cabinet", 1376, 815, 180, "ground", 0),
-    (2341, "the corner", 1403, 815, 180, "ground", 0),
-    (2132, "the sink", 1405, 855, 270, "ground", 0),
-    (2134, "a cabinet", 1405, 895, 270, "ground", 0),
-    (2404, "Charlie's surfboard", 1238, 815, 180, "ground", 0),
-    (2030, "the round table", 1295, 930, 0, "ground", 0),
-    (1811, "a chair", 1263, 898, 135, "ground", 0),
-    (1811, "a chair", 1327, 898, 225, "ground", 0),
-    (1811, "a chair", 1263, 962, 45, "ground", 0),
-    (1811, "a chair", 1327, 962, 315, "ground", 0),
-    (2836, "the kitchen's rug", 1295, 930, 0, "ground", 0),
     # ---- the family room
-    (1761, "the sofa", 1300, 1095, 180, "ground", 0),
-    (2094, "the cabinet behind it", 1300, 1045, 180, "ground", 0),
-    (1814, "the coffee table", 1300, 1160, 0, "ground", 0),
-    (2834, "the rug", 1300, 1160, 0, "ground", 0),
-    (1746, "the footstool", 1300, 1215, 0, "ground", 0),
-    (2311, "the TV's table", 1300, 1278, 0, "ground", 0),
-    (1786, "the TV", 1300, 1278, 0, "ground", 0.5),
-    (1735, "the armchair", 1440, 1150, 270, "ground", 0),
-    (1762, "an armchair", 1420, 1232, 315, "ground", 0),
-    (1742, "the bookshelf", 1215, 1240, 90, "ground", 0),
     # ---- the west wing: three bedrooms, two bathrooms, the hall
     (1745, "a bed", 505, 750, 270, "ground", 0),
     (2328, "a nightstand", 548, 700, 270, "ground", 0),
@@ -124,22 +87,20 @@ PIECES = [
 PLANTS = (948, 949, 2001, 2010, 2241, 2244, 2245, 2247, 2251)
 FRAMES = (2257, 2259, 2261, 2263, 2266, 2268, 2270, 2276, 2281, 2283, 2286)
 DECOR = [
-    # the living room: pictures round it, plants in its corners, a bookshelf by the piano's corner
-    (FRAMES[0], "a picture", 5.0, 5.0, "wall", "ground", 90), (FRAMES[1], "a picture", 9.0, 5.0, "wall", "ground", 90),
-    (FRAMES[2], "a picture", 13.0, 5.0, "wall", "ground", 90), (FRAMES[3], "a picture", 5.0, -2.0, "wall", "ground", 180),
-    (FRAMES[4], "a picture", 5.0, 2.0, "wall", "ground", 180),
-    (2010, "a plant", 3.2, 7.6, "floor", "ground", 0), (2001, "a plant", 15.0, 7.6, "floor", "ground", 0),
-    (2245, "a plant", 3.2, -9.0, "floor", "ground", 0),
-    (2817, "a rug", 9.0, -7.5, "floor", "ground", 0),
+    # the living room (its pictures, rugs, the fireplace...: decor.py): plants in its corners and by the stairs' foot
+    (2010, "a plant", 15.4, 7.7, "floor", "ground", 0), (2241, "a plant", 12.6, -0.6, "floor", "ground", 0),
+    (2011, "a palm", 2.9, 7.7, "floor", "ground", 0), (2245, "a plant", 12.6, -5.5, "floor", "ground", 0),
+    # the kitchen: Charlie's surfboard at the back, on the wall to the left (by the deck's glass door)
+    (2404, "Charlie's surfboard", 1.66, -9.94, "floor", "ground", 270),
     # the hall by the front door and the stairs
     (FRAMES[5], "a picture", 18.0, 2.0, "wall", "ground", 0), (2244, "a plant", 17.2, 3.0, "floor", "ground", 0),
-    (2815, "the hall's rug", 18.4, 1.5, "floor", "ground", 90),
     # the west wing's rooms
     (FRAMES[6], "a picture", -5.0, 4.0, "wall", "ground", 90), (FRAMES[7], "a picture", -5.0, -8.0, "wall", "ground", 270),
     (2818, "a rug", -5.0, 2.0, "floor", "ground", 0), (2842, "a rug", -5.0, -7.0, "floor", "ground", 0),
     (2247, "a plant", -7.8, 7.6, "floor", "ground", 0),
     # the family room
     (FRAMES[8], "a picture", 25.0, 5.0, "wall", "ground", 90), (2251, "a plant", 22.8, 8.6, "floor", "ground", 0),
+    (2010, "a plant in the family room", 0.3, 7.6, "floor", "ground", 0),
     # upstairs: Charlie's room
     (FRAMES[9], "a picture", 26.0, -5.0, "wall", "upper", 90), (FRAMES[10], "a picture", 26.0, -5.0, "wall", "upper", 270),
     (2847, "a rug", 26.0, -5.0, "floor", "upper", 0),

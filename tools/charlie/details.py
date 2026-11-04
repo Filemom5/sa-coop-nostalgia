@@ -124,21 +124,31 @@ def railing(plan, normals, flight_box, side_x, top_y, bottom_y, scale):
     x = side_x + 0.03
     tris = []
     ys = np.arange(min(top_y, bottom_y), max(top_y, bottom_y) + 1e-6, 0.16)
-    prof = sorted(((a + b) / 2, z) for a, b, z in treads)  # the rail follows the treads' middles, smooth
-    smooth = lambda y: float(np.interp(y, [p[0] for p in prof], [p[1] for p in prof]))
+    # the rail straight, along the flight's slope: a line through the steps' noses (the landings out of the fit),
+    # as the reference's; it was the treads' middles, which made it zigzag where the treads' depths differ
+    steps = [(a, b, z) for a, b, z in treads if b - a < 0.6]
+    noses = np.array([((b if top_y < bottom_y else a), z) for a, b, z in steps])
+    k, c = np.polyfit(noses[:, 0], noses[:, 1], 1)
+    lo_z, hi_z = noses[:, 1].min(), noses[:, 1].max()
+    line = lambda y: float(np.clip(k * y + c, lo_z, hi_z)) + h
     rail = []
     for y in ys:
         z = z_at(y)
         if z is None:
             continue
-        tris += _bar((x, y, z), (x, y, smooth(y) + h), 0.012)
-        rail.append((y, smooth(y) + h))
+        top = line(y)
+        tris += _bar((x, y, z), (x, y, top), 0.012)
+        mid = z + (top - z) * 0.5  # a knot halfway up each baluster, as the iron's twists
+        tris += _bar((x, y, mid - 0.06), (x, y, mid + 0.06), 0.028)
+        rail.append((y, top))
     for y in (ys[0], ys[-1]):
         z = z_at(y)
         if z is not None:
-            tris += _bar((x, y, z), (x, y, z + h + 0.06), 0.03)
-    for (ya, za), (yb, zb) in zip(rail, rail[1:]):
+            tris += _bar((x, y, z), (x, y, line(y) + 0.08), 0.035)
+            tris += _bar((x, y, line(y) + 0.08), (x, y, line(y) + 0.14), 0.05)
+    for (ya, za), (yb, zb) in zip(rail, rail[1:]):  # the hand rail (straight: the points are on the line), a thin one under it
         tris += _bar((x, ya, za), (x, yb, zb), 0.025)
+        tris += _bar((x, ya, za - 0.12), (x, yb, zb - 0.12), 0.012)
     T = np.array(tris, float)
     print("railing: %d balusters" % len(rail))
     return T, np.array(["rail_iron"] * len(T))
