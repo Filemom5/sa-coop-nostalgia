@@ -16,6 +16,8 @@
 #include "features/home/Home.h"
 
 #include <windows.h>
+#undef near  // windows.h's old pointer words: names of ours here
+#undef far
 
 #include <algorithm>
 #include <cmath>
