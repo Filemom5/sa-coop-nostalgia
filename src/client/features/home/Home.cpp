@@ -15,14 +15,12 @@
 //    their doors and let their players in.
 #include "features/home/Home.h"
 
-#include <windows.h>
-#undef near  // windows.h's old pointer words: names of ours here
-#undef far
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <map>
 #include <string>
 #include <vector>
@@ -447,8 +445,8 @@ bool Taken(int interior, int skipOwn) {
 bool HasEhi() {
     static int has = -1;
     if (has < 0) {
-        DWORD a = GetFileAttributesW(L"modloader\\Enterable_Hidden_Interiors");
-        has = a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0;
+        std::error_code ec;
+        has = std::filesystem::is_directory("modloader/Enterable_Hidden_Interiors", ec) ? 1 : 0;
     }
     return has == 1;
 }
