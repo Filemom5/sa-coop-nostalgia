@@ -273,7 +273,6 @@ def living(m):
     # the posters by the stairs (on the wall they go up along, x 15.1, looking west), the prints on the north wall
     framed(m, 15.1, -8.7, -0.9, -1, 0, 0.72, 0.96, "dec_post1")
     framed(m, 15.1, -10.4, 0.2, -1, 0, 0.72, 0.96, "dec_post2")
-    framed(m, 15.1, -12.2, 1.6, -1, 0, 0.6, 0.8, "dec_print1")
     framed(m, 3.8, 1.32, z + 2.3, 0, -1, 0.6, 0.8, "dec_print1")
     framed(m, 5.2, 1.32, z + 2.3, 0, -1, 0.6, 0.8, "dec_print2")
     framed(m, 12.0, 1.32, z + 2.3, 0, -1, 0.66, 0.88, "dec_post4")
@@ -323,8 +322,10 @@ def kitchen(m):
     m.box(-1.12, -16.57, z + 0.5, -1.08, -16.53, z + 1.1, "dec_steel")
     m.box(-1.12, -16.57, z + 1.3, -1.08, -16.53, z + 1.8, "dec_steel")
     # the cart (an island of light wood), the round table, its white chairs, the navy rug
-    m.add(console(1.05, 0.6, 0.92, "dec_lightwood", drawers=1), -3.0, -15.3, z, 0)
-    m.box(-3.48, -15.55, z + 0.3, -2.52, -15.05, z + 0.33, "dec_lightwood")
+    m.add(console(1.05, 0.6, 0.92, "dec_lightwood", drawers=1), -7.18, -13.42, z, 90)   # in the corner, as the show's
+    m.box(-7.43, -13.9, z + 0.3, -6.93, -12.94, z + 0.33, "dec_lightwood")
+    m.box(-7.5, -14.26, z + 1.55, -7.12, -13.66, z + 2.68, "dec_white")               # the tall glass cabinet
+    face(m, (-7.116, -14.22), (-7.116, -13.7), z + 1.58, z + 2.65, (1, 0), "dec_cabinet", True)
     rug(m, -3.6, -11.6, z, 3.0, 2.6, "dec_rug4")
     m.cyl(-3.6, -11.6, z, z + 0.06, 0.34, "dec_white", n=12)
     m.cyl(-3.6, -11.6, z + 0.06, z + 0.72, 0.09, "dec_white", n=10)
@@ -347,15 +348,79 @@ def family(m):
     legs(legs_m, 1.5, 0.8, 0.1, 0.03, "dec_darkwood", 0.06)
     m.add(legs_m, -3.6, -3.35, z, 0)
     # the armoire on the north wall, the cane chair, a sideboard, the prints over it, a plant
-    m.box(-5.3, 0.62, z, -3.5, 1.32, z + 2.45, "dec_wood")
-    m.box(-5.36, 0.58, z + 2.45, -3.44, 1.32, z + 2.58, "dec_wood")
-    for x0, x1 in ((-5.2, -4.43), (-4.37, -3.6)):
-        m.box(x0, 0.6, z + 1.0, x1, 0.62, z + 2.3, "dec_darkwood")
-        m.box(x0, 0.6, z + 0.15, x1, 0.62, z + 0.9, "dec_darkwood")
+    m.box(-8.62, -4.75, z, -7.92, -2.95, z + 2.45, "dec_wood")                        # the armoire (west wall)
+    m.box(-8.62, -4.81, z + 2.45, -7.88, -2.89, z + 2.58, "dec_wood")
+    for y0, y1 in ((-4.65, -3.88), (-3.82, -3.05)):
+        m.box(-7.92, y0, z + 1.0, -7.9, y1, z + 2.3, "dec_darkwood")
+        m.box(-7.92, y0, z + 0.15, -7.9, y1, z + 0.9, "dec_darkwood")
+    # the big TV facing the sofa, on a low stand against the north wall
+    m.add(console(2.2, 0.5, 0.55, "dec_darkwood", drawers=4), -3.6, 1.05, z, 180)
+    m.box(-4.6, 0.98, z + 0.55, -2.6, 1.1, z + 0.6, "dec_black")
+    m.box(-3.68, 1.0, z + 0.6, -3.52, 1.08, z + 0.72, "dec_black")
+    m.box(-4.75, 1.02, z + 0.72, -2.45, 1.12, z + 2.02, "dec_black")
+    face(m, (-4.68, 1.017), (-2.52, 1.017), z + 0.78, z + 1.96, (0, -1), "dec_screen", True)
     m.add(armchair("dec_beige", 0.95, 0.9, frame="dec_cane"), -6.4, -2.0, z, 63)
-    m.add(console(1.9, 0.5, 0.75, drawers=3), -1.4, 1.05, z, 180)
-    framed(m, -2.0, 1.32, z + 2.1, 0, -1, 0.55, 0.72, "dec_print1")
-    framed(m, -0.8, 1.32, z + 2.1, 0, -1, 0.55, 0.72, "dec_print2")
+    m.add(console(1.6, 0.5, 0.75, drawers=3), -1.2, 1.05, z, 180)
+    framed(m, -1.7, 1.32, z + 2.1, 0, -1, 0.5, 0.66, "dec_print1")
+    framed(m, -0.7, 1.32, z + 2.1, 0, -1, 0.5, 0.66, "dec_print2")
+
+
+def slab(m, p0, p1, w, t, mat):
+    """a board from p0 to p1 (in a plane x = const), w wide (x), t thick"""
+    p0, p1 = np.array(p0, float), np.array(p1, float)
+    d = p1 - p0
+    u = np.array([1.0, 0, 0])
+    v = np.cross(d, u)
+    v /= np.linalg.norm(v)
+    c = lambda p, a, b: tuple(p + u * a * w / 2 + v * b * t / 2)
+    for p in (p0, p1):
+        pass
+    corners = [(a, b) for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    for i in range(4):
+        a0, b0 = corners[i]
+        a1, b1 = corners[(i + 1) % 4]
+        m.quad(c(p0, a0, b0), c(p0, a1, b1), c(p1, a1, b1), c(p1, a0, b0), mat)
+    m.quad(c(p0, -1, 1), c(p0, 1, 1), c(p0, 1, -1), c(p0, -1, -1), mat)
+    m.quad(c(p1, -1, -1), c(p1, 1, -1), c(p1, 1, 1), c(p1, -1, 1), mat)
+
+
+def deck_chair():
+    """the show's deck chair: a wooden lounger, its back leaning, green cushions; its foot to -y"""
+    m = Mesh()
+    w = 0.66
+    for s in (-1, 1):                                       # the side frames, the armrests, the legs
+        x = s * (w / 2 + 0.03)
+        m.box(x - 0.03, -0.75, 0.0, x + 0.03, -0.69, 0.42, "dec_lightwood")
+        m.box(x - 0.03, 0.25, 0.0, x + 0.03, 0.31, 0.55, "dec_lightwood")
+        m.box(x - 0.04, -0.8, 0.28, x + 0.04, 0.4, 0.34, "dec_lightwood")
+        m.box(x - 0.06, -0.2, 0.55, x + 0.06, 0.35, 0.6, "dec_lightwood")
+    m.box(-w / 2, -0.8, 0.3, w / 2, 0.3, 0.36, "dec_lightwood")
+    m.box(-w / 2 + 0.02, -0.78, 0.36, w / 2 - 0.02, 0.28, 0.44, "dec_sofa")    # the seat's cushion
+    slab(m, (0, 0.3, 0.36), (0, 0.75, 1.05), w, 0.06, "dec_lightwood")          # the back, leaning
+    slab(m, (0, 0.24, 0.42), (0, 0.66, 1.06), w - 0.04, 0.08, "dec_sofa")
+    return m
+
+
+def deck(m):
+    z = RAISED
+    for x in (4.4, 6.2):
+        m.add(deck_chair(), x, -16.4, z, 0)
+    m.box(5.05, -16.65, z + 0.38, 5.55, -16.15, z + 0.42, "dec_lightwood")       # the little table between
+    for sx in (5.1, 5.5):
+        for sy in (-16.6, -16.2):
+            m.box(sx - 0.02, sy - 0.02, z, sx + 0.02, sy + 0.02, z + 0.38, "dec_lightwood")
+    m.cyl(3.2, -15.2, z, z + 0.6, 0.38, "dec_tile", n=10, r_top=0.46)              # a big pot, a palm in it
+    m.cyl(3.2, -15.2, z + 0.6, z + 1.6, 0.06, "dec_wood", n=6)
+    for k in range(6):
+        a = np.radians(k * 60)
+        m.bar((3.2, -15.2, z + 1.55), (3.2 + 0.8 * np.cos(a), -15.2 + 0.8 * np.sin(a), z + 1.2), 0.08, "dec_leaves")
+
+
+def bathroom(m):
+    """Charlie's bathroom upstairs: terracotta on its floor, as the show's (its walls: build.py's BATH)"""
+    z = 0.87 + 0.012
+    for x0, y0, x1, y1 in ((31.25, -7.75, 34.6, -1.7), (34.6, -6.95, 36.55, -1.7)):
+        m.quad((x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z), "dec_tile")
 
 
 def build():
@@ -364,6 +429,8 @@ def build():
     living(m)
     kitchen(m)
     family(m)
+    deck(m)
+    bathroom(m)
     T, M, U = m.arrays()
     print("decor: %d faces (living room, kitchen, family room)" % len(T))
     return T, M, U

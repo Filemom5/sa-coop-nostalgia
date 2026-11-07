@@ -208,6 +208,16 @@ def plaster_storey(seed):
     return img
 
 
+def bath_storey(seed):
+    """Charlie's bathroom's walls: blue plaster, ochre tiles up to 1.7 m (the bottom of a storey's height)"""
+    img = stucco((58, 80, 108), seed)
+    k = int(256 * 1.7 / 4.48)
+    t = tiles((206, 142, 72), 8, (232, 220, 196), seed + 1, jitter=0.06)
+    img[-k:] = t[-k:]
+    img[-k - 3:-k] = (232, 220, 196)
+    return img
+
+
 def door(seed):
     """the doors' leaves: dark stained planks, two battens, iron studs"""
     img = planks((92, 56, 32), 5, seed, gap=(48, 30, 20), grain=0.22)
@@ -500,6 +510,8 @@ def make():
         "nch_leaves": leaves(271),
         "nch_bloom": leaves(272, flowers=(214, 50, 120)),
         "nch_walk": tiles((176, 172, 164), 2, (130, 126, 120), 291, jitter=0.04),
+        "nch_bath": bath_storey(311),
+        "nch_screen": tint((22, 26, 32), noise(64, 2, 301) * 0.3 + np.linspace(1, -1, 64)[None, :], 0.25),
         "nch_soil": tint((84, 62, 44), fbm(128, (3, 12, 40), (0.5, 0.3, 0.3), 281), 0.25),
     }
 

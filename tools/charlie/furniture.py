@@ -31,6 +31,18 @@ SIZE = {1766: (2.75, 0.97, 1.11), 1761: (2.85, 0.98, 1.04), 1754: (0.97, 0.97, 0
         2011: (0.98, 0.98, 2.0), 2001: (0.94, 0.95, 1.78), 2241: (1.1, 1.06, 1.02), 2096: (0.5, 0.72, 0.96),
         1819: (1.17, 1.17, 0.52), 1742: (1.44, 0.37, 2.03), 1645: (0.9, 2.1, 0.8)}
 
+# the game's objects' collision boxes (x0, y0, x1, y1 about their origin, from coop\lote.txt): many are not centred
+# on it (a bed's runs 0.8 to 3.5 m ahead of it), so a piece's place in the drawing is its box's middle
+BOX = {1735: (-0.42, -0.48, 0.45, 0.46), 1742: (-0.49, -0.49, 0.95, -0.12), 1745: (-0.49, 0.82, 1.50, 3.49),
+       1746: (-0.50, -0.50, 0.50, 0.50), 1754: (-0.50, -0.50, 0.50, 0.50), 1761: (-0.42, -0.47, 2.44, 0.50),
+       1762: (-0.23, -0.49, 1.21, 0.49), 1766: (-0.35, -0.48, 2.40, 0.50), 1786: (-0.49, -0.49, 0.68, 0.07),
+       1798: (-0.49, 0.73, 1.50, 3.49), 1802: (-0.41, 0.97, 1.47, 3.47), 1806: (-0.27, -0.14, 0.29, 0.42),
+       1811: (-0.37, -0.34, 0.39, 0.35), 1814: (-0.37, 0.05, 1.34, 0.97), 1819: (-0.07, -0.07, 1.10, 1.10),
+       2030: (-0.85, -0.84, 0.86, 0.84), 2094: (-0.48, 0.86, 1.50, 1.50), 2096: (-0.25, -0.27, 0.25, 0.45),
+       2165: (-0.47, -0.41, 1.47, 0.49), 2299: (-0.46, 0.98, 1.47, 3.49), 2306: (-0.49, 0.85, 0.49, 1.49),
+       2311: (-0.45, -0.47, 1.97, 0.48), 2328: (-0.46, 0.72, 0.49, 1.50), 2514: (-0.20, -0.08, 0.21, 0.51),
+       2516: (-0.47, -0.48, 1.76, 0.49), 2518: (0.20, 0.04, 0.83, 0.52), 1645: (-0.40, -1.16, 0.41, 1.13)}
+
 PIECES = [
     # ---- the living room (sunken), the piano's raised floor by the deck's doors
     # ---- the deck
@@ -39,8 +51,6 @@ PIECES = [
     (1811, "a chair", 932, 790, 225, "ground", 0),
     (1811, "a chair", 868, 854, 45, "ground", 0),
     (1811, "a chair", 932, 854, 315, "ground", 0),
-    (1645, "a lounge chair", 1050, 842, 225, "ground", 0),
-    (1645, "a lounge chair", 1112, 792, 225, "ground", 0),
     (2096, "a rocking chair", 780, 800, 180, "ground", 0),
     # ---- the kitchen: the counter along the wall, turning at the corner; the round table
     # ---- the family room
@@ -72,7 +82,6 @@ PIECES = [
     (2328, "a nightstand", 484, 112, 180, "upper", 0),
     (1746, "the bench at its foot", 425, 222, 0, "upper", 0),
     (1735, "an armchair", 305, 142, 135, "upper", 0),
-    (1754, "an armchair", 300, 255, 45, "upper", 0),
     (1819, "a small table", 362, 272, 0, "upper", 0),
     (2516, "the bath", 178, 438, 0, "upper", 0),
     (2514, "the toilet", 268, 395, 270, "upper", 0),
@@ -111,11 +120,10 @@ DECOR = [
     # outside: plants along the walk, by the street's wall and the house; the court; the drive; the east yard
 ] + [(PLANTS[i % len(PLANTS)], "a plant by the wall", x, 11.4, "lot", "", 0) for i, x in
      enumerate((-11.0, -6.0, -1.0, 4.0, 9.0, 14.0, 24.0, 28.0, 33.0, 38.0))] + \
-    [(PLANTS[(i + 3) % len(PLANTS)], "a plant by the house", x, 7.1, "lot", "", 0) for i, x in enumerate((-5.0, -0.5, 4.0, 14.0))] + \
     [(949, "a plant in the court", 17.1, 6.0, "lot", "", 0), (948, "a plant in the court", 21.3, 6.0, "lot", "", 0),
      (2010, "a plant by the side door", -9.9, -8.0, "lot", "", 0), (2001, "a plant by the side door", -9.9, 0.0, "lot", "", 0),
      (2011, "a palm on the drive", -21.4, -4.0, "lot", "", 0), (2011, "a palm on the drive", -21.4, -12.0, "lot", "", 0),
-     (1645, "a lounge chair", 36.0, -9.0, "lot", "", 180), (1645, "a lounge chair", 38.5, -9.0, "lot", "", 180),
+     (1645, "a lounge chair", 36.0, -9.0, "lot", "", 0), (1645, "a lounge chair", 38.5, -9.0, "lot", "", 0),
      (2030, "the yard's table", 37.0, -1.5, "lot", "", 0), (1811, "a chair", 36.0, -2.5, "lot", "", 315),
      (1811, "a chair", 38.0, -0.5, "lot", "", 135), (2241, "a plant", 41.0, 11.0, "lot", "", 0)]
 
@@ -156,9 +164,9 @@ def walls(plan, normals, mats, z):
 
 
 def footprint(center, size, head, scale):
-    """the cells of a piece's footprint (plan metres; the piece's size is the game's, so / scale), 8 cm in"""
+    """the cells of a piece's footprint (plan metres; the piece's size is the game's, so / scale), 5 cm round it"""
     res = RASTER["res"]
-    hx, hy = max(size[0] / 2 / scale - 0.08, 0.02), max(size[1] / 2 / scale - 0.08, 0.02)
+    hx, hy = size[0] / 2 / scale + 0.03, size[1] / 2 / scale + 0.03  # all of it, and a little round it
     c, s = np.cos(np.radians(head)), np.sin(np.radians(head))
     out = set()
     for x in np.arange(-hx, hx + 1e-6, res / 2):
@@ -196,12 +204,18 @@ def place(plan, mats, scale):
     for model, what, u, v, facing, floor, height in PIECES:
         xy, head = to_plan(u, v, floor), heading(facing + (180 if model in FLIP else 0))
         size = SIZE.get(model, (1.0, 1.0, 1.0))
+        coff = np.zeros(2)
+        if model in BOX:
+            b = BOX[model]
+            size = (b[2] - b[0], b[3] - b[1], size[2])
+            coff = np.array([(b[0] + b[2]) / 2, (b[1] + b[3]) / 2])
         if height == 0 and size[2] > 0.05:  # rugs and things on others: no check
             best = None
-            for r in np.arange(0, 1.01, 0.05):
+            for r in np.arange(0, 1.61, 0.05):
                 for a in np.arange(0, 360, 30 if r else 360):
                     p = xy + r * np.array([np.cos(np.radians(a)), np.sin(np.radians(a))])
-                    if not footprint(p, size, head, scale) & wall[floor]:
+                    if not footprint(p, size, head, scale) & wall[floor] and \
+                            floor_z(plan, normals, mats, p, floor) is not None:
                         best = p
                         break
                 if best is not None:
@@ -215,7 +229,9 @@ def place(plan, mats, scale):
         if z is None:
             print("  furniture: %s (%d): no floor under it, left out" % (what, model))
             continue
-        out.append((model, what, xy[0], xy[1], z, head, height))
+        c, s_ = np.cos(np.radians(head)), np.sin(np.radians(head))  # its origin: the box's middle less its offset
+        ox, oy = xy - np.array([c * coff[0] - s_ * coff[1], s_ * coff[0] + c * coff[1]]) / scale
+        out.append((model, what, ox, oy, z, head, height))
     print("furniture: %d pieces%s" % (len(out), (", moved off the walls: " + ", ".join(moved)) if moved else ""))
     return out
 

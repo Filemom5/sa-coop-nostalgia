@@ -218,6 +218,11 @@ def build(house_tris, floor, lot, ramps, beach_y, street_z=3.62, sand_z=3.15):
             if 0 <= i < h and 0 <= j < w and inner[i, j]:
                 m.box(gx - 0.16, gy - 0.16, sand_z - 0.3, gx + 0.16, gy + 0.16, floor - 0.3, "site_wood")
 
+    # under each way in, at the street: a face down to below the sidewalk (no gap under its lip to look into)
+    for rx0, rx1, ry_top, style in ramps:
+        m.quad((rx1, Y1, street_z - 0.6), (rx0, Y1, street_z - 0.6), (rx0, Y1, street_z), (rx1, Y1, street_z), "site_stucco")
+        col += [[(rx0, Y1, street_z - 0.6), (rx1, Y1, street_z - 0.6), (rx1, Y1, street_z)],
+                [(rx0, Y1, street_z - 0.6), (rx1, Y1, street_z), (rx0, Y1, street_z)]]
     # the gates: pillars with lanterns at the street on both sides of each way in
     lamps = []
     for rx0, rx1, ry_top, style in ramps:

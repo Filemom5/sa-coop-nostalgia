@@ -215,7 +215,7 @@ def vine(m, x, y, z0, z1, n, rng):
     right = np.array([n[1], -n[0]])
     while z < z1:
         s = rng.uniform(0.25, 0.45)
-        off += rng.uniform(-0.15, 0.15)
+        off = float(np.clip(off + rng.uniform(-0.1, 0.1), -0.12, 0.12))
         c = np.array([x, y]) + right * off + np.array(n) * (s / 2)
         m.box(c[0] - s / 2, c[1] - s / 2, z, c[0] + s / 2, c[1] + s / 2, z + s * 1.2,
               "dec_bloom" if rng.random() < 0.55 else "dec_leaves")
@@ -254,9 +254,7 @@ def lot_details(m, lot, ramps, zf, street_z, court, front_y):
     cx0, cy0, cx1, cy1 = court
     for x in (cx0 + 0.6, cx1 - 0.6):
         vine(m, x - 0.14, cy1 + 0.36, zt, zt + 3.6, (-1, 0), rng)
-    for y in (cy0 + 0.8, cy0 + 3.0):
-        vine(m, cx0 + 0.02, y, zt, zt + 3.2, (1, 0), rng)
-        vine(m, cx1 - 0.02, y, zt, zt + 3.2, (-1, 0), rng)
+    vine(m, cx1 - 0.02, cy0 + 3.0, zt, zt + 3.2, (-1, 0), rng)  # on the court's east wall (its west one has the door)
 
 
 def storey_band(m, house, mats, zf, inside, storey=4.48):
@@ -285,8 +283,7 @@ def storey_band(m, house, mats, zf, inside, storey=4.48):
 def build(house, mats, zf, lot, ramps, street_z, court, front_y):
     m = Mesh()
     inside = covered_map(house, mats, zf)
-    walls = outer_walls(house, mats, zf, zf + 0.45, inside)
-    stone_base(m, walls, zf)
+    walls = {}  # the stone base along the walls: out (it flickered with the skirting; the skirting is dark wood)
     n_sill, n_shut, n_win = window_trims(m, house, mats, zf, inside)
     n_band = storey_band(m, house, mats, zf, inside)
     lot_details(m, lot, ramps, zf, street_z, court, front_y)

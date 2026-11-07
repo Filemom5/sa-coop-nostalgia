@@ -27,18 +27,24 @@ def _wall_points(parts, skip, z=1.0):
     return np.concatenate(pts)
 
 
-def open_doors(parts, doors, sliding):
-    """parts with the doors' leaves (doors, but not the sliding ones) turned open and renamed (path + '/open', material
+def open_doors(parts, doors, sliding, away=()):
+    """away: points (model's axes) of corridors: a door within 2.5 m of one opens away from it, into its room.
+    Parts with the doors' leaves (doors, but not the sliding ones) turned open and renamed (path + '/open', material
     'door_leaf': the door finder no longer takes them for doors), the garage's doors rolled up ('garage_door')"""
     groups = {}
     for path, mat, T in parts:
         if path in doors and path not in sliding:
             groups.setdefault(path, []).append(T)
-    walls = _wall_points(parts, set(groups) | set(GARAGE))
+    skip = set(groups) | set(GARAGE)
+    by_floor = {}  # the walls at each floor's level (the ground floor's, the upper floor's)
     turn = {}
     for path, Ts in groups.items():
         P = np.concatenate(Ts).reshape(-1, 3)
         lo, hi = P.min(0), P.max(0)
+        level = round(float(lo[2]), 0)
+        if level not in by_floor:
+            by_floor[level] = _wall_points(parts, skip, lo[2] + 1.0)
+        walls = by_floor[level]
         along = 0 if hi[0] - lo[0] > hi[1] - lo[1] else 1  # the wall's way
         thin = 1 - along
         mid_thin = (lo[thin] + hi[thin]) / 2
@@ -57,8 +63,22 @@ def open_doors(parts, doors, sliding):
                 side = seg.copy()
                 side[:, along] += d * 0.06
                 hits = sum(int((np.linalg.norm(walls - p, axis=1) < 0.07).any()) for p in np.concatenate([seg, side]))
-                if best is None or hits < best[0]:
-                    best = (hits, h, d, s)
+                # the room's depth that way (to 4 m): into the room, not across a corridor (two leaves would shut it)
+                mid = np.array(h, float)
+                mid[along] += d * width / 2
+                free = 4.0
+                for t in np.arange(0.1, 4.0, 0.1):
+                    q2 = mid.copy()
+                    q2[thin] += s * t
+                    if (np.linalg.norm(walls - q2, axis=1) < 0.07).any():
+                        free = t
+                        break
+                key = (hits, -free)
+                for c in away:  # a corridor's door: into the room
+                    if abs(c[2] - lo[2]) < 2.0 and np.hypot(*(np.array(c[:2]) - mid)) < 2.5:
+                        key = (0 if np.sign(mid_thin - c[thin]) == s else 1000,) + key
+                if best is None or key < best[0]:
+                    best = (key, h, d, s)
         _, h, d, s = best
         dvec = np.zeros(2)
         dvec[along] = d

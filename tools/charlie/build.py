@@ -28,6 +28,7 @@ import numpy as np
 
 import decor
 import details
+import edits
 import exterior
 import furniture
 import lot
@@ -70,11 +71,14 @@ DISK = (15.0, 4.45 + DY)
 # iron lanterns on the walls by the doors: (x, y, height over the floor, the wall's outward x, y)
 LANTERNS = [(16.62, 5.9 + DY, 3.0, 1, 0), (21.9, 4.6 + DY, 3.0, -1, 0), (-9.12, -3.3 + DY, 3.0, -1, 0),
             (-9.12, -1.1 + DY, 3.0, -1, 0), (-21.0, -15.55 + DY, 3.7, 0, 1), (-15.9, -15.55 + DY, 3.7, 0, 1),
-            (-10.6, -15.55 + DY, 3.7, 0, 1), (27.92, 5.9 + DY, 3.0, 1, 0), (30.92, -6.2 + DY, 3.0, 1, 0)]
+            (-10.6, -15.55 + DY, 3.7, 0, 1), (27.92, 5.9 + DY, 3.0, 1, 0), (30.92, -6.2 + DY, 3.0, 1, 0),
+            (18.2, 3.5 + DY, 2.7, 0, 1)]  # by the court's window, at its top
 EAST_CUT = 308.0                                # the east block: what is west of this x goes (the safe house stays)
 # the glass sliding doors (their leaves the door finder takes for doors): the second leaf of each pair over the first
 SLIDING = {"SketchUp/group_69": (0, 0), "SketchUp/group_70": (-0.90, 0.06),
            "SketchUp/group_71": (0, 0), "SketchUp/group_72": (0.06, -0.89)}
+BATH = ((31.0, -8.1, 0.6), (37.0, -1.4, 5.5))     # Charlie's bathroom upstairs (block's axes): blue and tiled
+BATH_PLAN = None                                # (the same in the plan: main() sets it)
 LIVING = ((-3.4, 2.7), (3.5, 9.5))              # the sunken living room (plan): a dark wood floor
 CELL = 0.5                                      # the roof's map (no rain under it)
 VER = 0x1803FFFF                                # RenderWare 3.6.0.3, as the game's files
@@ -91,7 +95,7 @@ TEX_SIZE = {"nch_stucco": 3.0, "nch_plaster": 3.0, "nch_tile": 2.0, "nch_roof": 
             "nch_door": 1.6, "nch_glow": 0.4, "nch_joist": 2.4, "nch_stone": 2.0, "nch_cream": 2.0, "nch_sofa": 0.8,
             "nch_leather": 0.8, "nch_beige": 0.8, "nch_grey": 0.8, "nch_ottoman": 0.8, "nch_cane": 0.5,
             "nch_ytile": 0.9, "nch_steel": 1.5, "nch_copper": 1.0, "nch_bluegrey": 1.0, "nch_lightwood": 1.2,
-            "nch_leaves": 0.8, "nch_bloom": 0.8, "nch_soil": 1.5, "nch_walk": 3.0}
+            "nch_leaves": 0.8, "nch_bloom": 0.8, "nch_soil": 1.5, "nch_walk": 3.0, "nch_screen": 2.2}
 PLASTER_STOREY = 2.8 * SCALE  # the inside walls' texture: a storey high, its skirting at the bottom (both floors)
 MAT_TEX = {"piano_black": "nch_black", "piano_keys": "nch_keys", "site_paving": "nch_paving",
            "site_stucco": "nch_stucco", "site_timber": "nch_timber", "site_under": "nch_under", "site_wood": "nch_wood",
@@ -160,7 +164,8 @@ def door_groups(parts):
     doors = set()
     for path, (lo, hi) in boxes.items():
         s = hi - lo
-        if path.count("/") == 1 and 1.8 < s[2] < 2.5 and 0.5 < max(s[0], s[1]) < 1.3 and min(s[0], s[1]) < 0.25 and lo[2] < 0.5:
+        on_floor = lo[2] < 0.5 or 2.6 < lo[2] < 3.2  # the ground floor's or the upper floor's (its doors were left shut)
+        if path.count("/") == 1 and 1.8 < s[2] < 2.5 and 0.5 < max(s[0], s[1]) < 1.3 and min(s[0], s[1]) < 0.25 and on_floor:
             doors.add(path)
     return doors
 
@@ -174,6 +179,7 @@ def faces(parts):
                            and not any(mat.startswith(d) for d in DROP)])
     lo, hi = rest.reshape(-1, 3).min(0), rest.reshape(-1, 3).max(0)
     mid = (lo + hi) / 2
+    faces.mid = mid
     keep = [(path, mat, T) for path, mat, T in parts
             if (path not in doors or path in SLIDING) and not any(mat.startswith(d) for d in DROP)]
     tris = np.concatenate([T for _, _, T in keep])
@@ -286,6 +292,7 @@ def classify(mats, plan, normals, open_, piece_area):
     area = np.linalg.norm(np.cross(plan[:, 1] - plan[:, 0], plan[:, 2] - plan[:, 0]), axis=1) / 2
     inbox = lambda box: np.all((plan >= np.array(box[0]) - 1e-3) & (plan <= np.array(box[1]) + 1e-3), axis=(1, 2))
     on_stairs, deck_stairs = inbox(STAIRS[0]), inbox(STAIRS[1])  # the house's flight; the deck's, down to the sand
+    in_bath = inbox(BATH_PLAN) if BATH_PLAN is not None else np.zeros(len(mats), bool)
     out = []
     geometric = {"Color_C08", "Color_M00", "Wood_Veneer_02", "Wallpaper_Stripe", "Cladding_Siding_Tan", "sand"}
     for i, m in enumerate(mats):
@@ -308,17 +315,25 @@ def classify(mats, plan, normals, open_, piece_area):
             out.append("nch_roof")
         elif n[2] >= 0.95 and o > 0.45 and zmid[i] > 2.0:
             out.append("nch_tile")               # the terraces
+        elif on_stairs[i] and n[2] > 0.9 and not m.startswith(("dec_", "piano", "rail")):
+            out.append("nch_tile")               # the treads and the landing: terracotta, as the show's
         elif abs(n[2]) < 0.05 and 0.09 < h[i] < 0.21 and (on_stairs[i] or (z[i].min() > -0.01 and z[i].max() < 0.16)):
             out.append("nch_riser")
         elif m == "Wood_Veneer_02" and n[2] < -0.2:
             out.append("nch_ceiling")            # the boards between the beams, from below: light
         elif m in MAT_TEX:
             out.append(MAT_TEX[m])
+        elif in_bath[i] and n[2] > 0.95:
+            out.append("nch_tile")               # Charlie's bathroom: terracotta on the floor
+        elif in_bath[i] and abs(n[2]) < 0.3 and o <= 0.3:
+            out.append("nch_bath")               # its walls: blue, ochre tiles to 1.7 m
         elif n[2] > 0.2:
             (lx, ly), (hx, hy) = LIVING
             c = plan[i].mean(0)
             if abs(zmid[i]) < 0.05 and lx < c[0] < hx and ly < c[1] < hy:
                 out.append("nch_darkwood")
+            elif zmid[i] >= 2.7 and n[2] > 0.95:
+                out.append("nch_darkwood")       # upstairs: dark planks, as the show's
             elif 0.05 < zmid[i] < 2.7 and area[i] < 1.5 or zmid[i] >= 2.7:
                 out.append("nch_floorwood")
             else:
@@ -346,7 +361,7 @@ def uvs(tris, normals, tex, given, floor=0.0):
             uv[i, :, 1] = (t[:, 2].max() - t[:, 2]) / (4 * hz)
             continue
         size = TEX_SIZE.get(k, 3.0)
-        if k == "nch_plaster" and a[2] < 0.3:  # a storey a texture, its skirting on the floors
+        if k in ("nch_plaster", "nch_bath") and a[2] < 0.3:  # a storey a texture, its skirting on the floors
             along = t[:, 1] if a[0] >= a[1] else t[:, 0]
             uv[i, :, 0] = along / PLASTER_STOREY
             uv[i, :, 1] = (floor + PLASTER_STOREY - t[:, 2]) / PLASTER_STOREY
@@ -741,8 +756,14 @@ def extras(house):
 def main(dae, lote, header=None):
     """dae: the house's model; lote: coop\\lote.txt; header: CharlieData.h"""
     parts = load(dae)
-    parts = details.open_doors(parts, door_groups(parts), SLIDING)  # the doors open, the garage's rolled up
+    t0, _, p0 = faces(parts)  # where the model goes (for edits.py's axes)
+    off0 = np.array([t0[0, 0, 0] - p0[0, 0, 0] * SCALE, t0[0, 0, 1] - p0[0, 0, 1] * SCALE, FLOOR - ORIGIN[2]])
+    parts = edits.apply(parts, off0, faces.mid)  # the upstairs corridor wider, the court's window in the middle
+    away = [edits.Axes(off0, faces.mid).p(c) for c in edits.CORRIDORS]
+    parts = details.open_doors(parts, door_groups(parts), SLIDING, away)  # the doors open, the garage's rolled up
     tris, mats, plan = faces(parts)
+    global BATH_PLAN
+    BATH_PLAN = tuple(tuple((np.array(c) - off0) / SCALE) for c in BATH)
     # the house's base under its floor (down into the sand) goes: the house stands on its pilings (the deck's stairs stay)
     deck = np.all((plan >= np.array(STAIRS[1][0]) - 1e-3) & (plan <= np.array(STAIRS[1][1]) + 1e-3), axis=(1, 2))
     tris, mats, plan = clip_base(tris, mats, plan, ~deck)
@@ -769,7 +790,7 @@ def main(dae, lote, header=None):
     # the lot: raised, its walls, the pilings, the drive and the steps up from the street, the gates (lot.py)
     zl = lambda z: z - ORIGIN[2]
     stris, smats, scol, kind, lamps = lot.build(tris[:n_house], zl(FLOOR), LOT, RAMPS, beach_y,
-                                                street_z=zl(3.62), sand_z=zl(3.15))
+                                                street_z=zl(3.45), sand_z=zl(3.15))  # the street: the sidewalk's level
     print("lot: %d faces" % len(stris))
     more, print_specs = decorate(tris[:n_house], plan[:len(pnorm)], pnorm, mats[:len(pnorm)], off)
     pieces += more
@@ -833,7 +854,10 @@ def main(dae, lote, header=None):
     nplan /= np.maximum(np.linalg.norm(nplan, axis=1), 1e-9)[:, None]
     ramp = ramps(plan[:n_house], tris[:n_house], nplan[:n_house])
     ramp_l = ramp * SCALE + off                    # (as faces() places the plan)
-    col = write_col("santahouse04_law2", 6285, np.concatenate([tris, ramp_l, scol]))
+    # not in the collision: what one walks through (leaves, flowers) or over (rugs), what hangs on the walls
+    soft = np.array([m.startswith(("dec_leaves", "dec_bloom", "dec_rug", "dec_post", "dec_print", "dec_books"))
+                     for m in mats])
+    col = write_col("santahouse04_law2", 6285, np.concatenate([tris[~soft], ramp_l, scol]))
     rx, ry, rw, rh, rbits, rtop, _ = roof_map(tris, tex)
     hide = hidden(lote, tris, tex)
     tx = textures.make()

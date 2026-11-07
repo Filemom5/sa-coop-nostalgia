@@ -1,5 +1,24 @@
 ## Novo nesta versão
 
+- **Casa do Charlie Harper, sexta versão:**
+  - **Rampa da garagem sem buraco:** a frente da rampa e dos degraus fecha até a calçada, sem fresta para o vazio.
+  - **Sem piscar:** a base de pedra das paredes saiu (ela brigava com o rodapé). Fica só o rodapé de madeira escura.
+  - **Andar de cima com acesso:** as portas do andar de cima estavam fechadas no modelo e agora abrem. O corredor
+    do quarto do Charlie ficou mais largo, e as portas do quarto e do closet abrem para dentro dos cômodos.
+  - **Escada de cima como a da série:** degraus de lajota terracota com azulejo espanhol na frente.
+  - **Banheiro do Charlie:** paredes azuis com azulejo ocre até a metade e chão de lajota. O andar de cima tem
+    piso de madeira escura.
+  - **Pátio da porta:** a janela foi para o meio da parede, com uma lanterna no canto de cima, e a planta que
+    tampava a porta saiu. Folhas, flores, tapetes e quadros não têm mais colisão.
+  - **Sala de TV:** TV grande de frente para o sofá e armário de madeira na parede da esquerda.
+  - **Cozinha:** armário alto de vidro ao lado da janela e o carrinho de madeira no canto, como na referência.
+  - **Deck:** duas espreguiçadeiras de madeira com almofada verde viradas para o mar, mesinha e vaso com palmeira.
+    As do quintal também olham para o mar.
+  - **Camas, pias e banheiras fora das paredes:** os móveis do jogo agora são posicionados pela caixa real deles.
+  - Saiu o quadro que ficava flutuando em cima da escada.
+
+## Da versão 1.28.0
+
 - **Casa do Charlie Harper, quinta versão:**
   - **Muro fora da calçada:** o terreno e a casa recuaram 4,5 m para a areia. O muro da rua agora fica alinhado com a
     frente da casa vizinha e a calçada fica livre.
