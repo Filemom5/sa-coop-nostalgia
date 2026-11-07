@@ -15,8 +15,11 @@
 //    their doors and let their players in.
 #include "features/home/Home.h"
 
+#include <windows.h>
+
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <string>
@@ -57,11 +60,13 @@ constexpr float kPi = 3.14159265f;
 
 // ---------------------------------------------------------------- the game's house interiors
 // where a player stands in each (as the burglary houses and the safe houses put it there), and its area
-enum : uint8_t { I_HOUSE, I_SAFE, I_RYDER, I_SWEET, I_COLONEL, I_TRAILER, I_MADDOGG, I_JOHNSON, I_BURNING };
+enum : uint8_t { I_HOUSE, I_SAFE, I_RYDER, I_SWEET, I_COLONEL, I_TRAILER, I_MADDOGG, I_JOHNSON, I_BURNING, I_GF, I_OGLOC,
+                 I_BDUP, I_CRACK, I_WOOZIE, I_STUDIO };
 struct Interior {
     uint8_t area;
     float x, y, z;
     uint8_t kind, n;
+    bool ehi = false;  // its collision comes with the Enterable Hidden Interiors mod (modloader): only with it
 };
 const Interior kInteriors[] = {
     {1, 224.6351f, 1289.012f, 1082.141f, I_HOUSE, 1},    {2, 225.756f, 1240.000f, 1082.149f, I_HOUSE, 2},
@@ -84,6 +89,14 @@ const Interior kInteriors[] = {
     {2, 2464.211f, -1697.952f, 1013.508f, I_RYDER, 0},   {1, 2525.042f, -1679.115f, 1015.499f, I_SWEET, 0},
     {8, 2807.899f, -1172.921f, 1025.57f, I_COLONEL, 0},  {2, 0.344f, -0.514f, 999.4284f, I_TRAILER, 0},
     {5, 1262.1451f, -785.3298f, 1091.9063f, I_MADDOGG, 0}, {3, 2496.05f, -1693.926f, 1014.742f, I_JOHNSON, 0},
+    // the girlfriends' rooms (the game's own, for the dates) and the cutscenes' houses the Enterable Hidden Interiors mod
+    // opens (their places from its EHI.ipl): new ones at the end, the saved numbers stay
+    {1, 245.977f, 304.988f, 999.148f, I_GF, 1},   {2, 268.821f, 304.997f, 999.148f, I_GF, 2},
+    {3, 291.058f, 310.006f, 999.148f, I_GF, 3},   {4, 299.741f, 312.878f, 999.148f, I_GF, 4},
+    {5, 322.162f, 304.551f, 999.148f, I_GF, 5},   {6, 345.881f, 305.062f, 999.148f, I_GF, 6},
+    {3, 516.791f, -12.911f, 1001.565f, I_OGLOC, 0, true},   {3, 1531.441f, -8.921f, 1002.078f, I_BDUP, 0, true},
+    {2, 1525.892f, -46.541f, 1002.109f, I_CRACK, 0, true},  {1, -2160.639f, 641.919f, 1052.375f, I_WOOZIE, 0, true},
+    {3, 1037.978f, -1.979f, 1001.281f, I_STUDIO, 0, true},
 };
 constexpr int kInteriorCount = (int)(sizeof kInteriors / sizeof kInteriors[0]);
 // a house that is its own interior: one walks in through its doors (Charlie Harper's, features/charlie), the save disk
@@ -103,6 +116,15 @@ std::string InteriorName(int i) {
     case I_TRAILER: return TR("Трейлер", "Trailer");
     case I_MADDOGG: return TR("Особняк Мэдд Догга", "Madd Dogg's mansion");
     case I_JOHNSON: return TR("Дом Джонсонов", "The Johnson house");
+    case I_GF: {
+        static const char* const kGf[] = {"Denise", "Katie", "Helena", "Michelle", "Barbara", "Millie"};
+        return Format(TR("Комната %s", "%s's room"), kGf[std::clamp((int)in.n, 1, 6) - 1]);
+    }
+    case I_OGLOC: return TR("Дом OG Loc", "OG Loc's house");
+    case I_BDUP: return TR("Квартира Би Дапа", "B Dup's apartment");
+    case I_CRACK: return TR("Крэк-дворец Би Дапа", "B Dup's crack palace");
+    case I_WOOZIE: return TR("Квартира Ву Зи", "Woozie's apartment");
+    case I_STUDIO: return TR("Студия Blastin' Fools", "Blastin' Fools Records");
     default: return TR("Дом из миссии", "The mission's house");
     }
 }
@@ -419,12 +441,36 @@ bool Taken(int interior, int skipOwn) {
             if (h.interior == interior) return true;
     return false;
 }
-int FreeInterior(int after, int skipOwn) {
-    for (int k = 1; k <= kInteriorCount; ++k) {
-        int i = (after + k + kInteriorCount) % kInteriorCount;
-        if (!Taken(i, skipOwn)) return i;
+// the Enterable Hidden Interiors mod in modloader (the launcher installs it): the interiors that need it can be used
+bool HasEhi() {
+    static int has = -1;
+    if (has < 0) {
+        DWORD a = GetFileAttributesW(L"modloader\\Enterable_Hidden_Interiors");
+        has = a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0;
     }
-    return (after + 1 + kInteriorCount) % kInteriorCount;
+    return has == 1;
+}
+bool Usable(int i) { return i >= 0 && i < kInteriorCount && (!kInteriors[i].ehi || HasEhi()); }
+// step: +1 the next, -1 the one before (in the list's order, free and usable ones only)
+int FreeInterior(int after, int skipOwn, int step = 1) {
+    for (int k = 1; k <= kInteriorCount; ++k) {
+        int i = ((after + step * k) % kInteriorCount + kInteriorCount) % kInteriorCount;
+        if (Usable(i) && !Taken(i, skipOwn)) return i;
+    }
+    return ((after + step) % kInteriorCount + kInteriorCount) % kInteriorCount;
+}
+
+// /casa interior lista: every interior with its number, the ones taken by the group marked
+void ListInteriors(int skipOwn) {
+    ui::TheChat().AddSystem(TR("Интерьеры (/casa interior <номер>; * занят, - нужен мод):",
+                               "Interiors (/casa interior <number>; * taken, - needs the mod):"));
+    std::string line;
+    for (int i = 0; i < kInteriorCount; ++i) {
+        std::string item = Format("%d %s%s", i + 1, InteriorName(i).c_str(), !Usable(i) ? "-" : Taken(i, skipOwn) ? "*" : "");
+        if (!line.empty() && line.size() + item.size() > 90) ui::TheChat().AddSystem(line), line.clear();
+        line += (line.empty() ? "" : "  ·  ") + item;
+    }
+    if (!line.empty()) ui::TheChat().AddSystem(line);
 }
 
 // ---------------------------------------------------------------- icons
@@ -795,7 +841,9 @@ void RenderPanel() {
            "  /casa remover  ·  give up the house you are at (half its price back)"),
         TR("  /casa principal  ·  этот дом - главный (/home и начало игры)",
            "  /casa principal  ·  this house is the main one (/home and the session's start)"),
-        TR("  /casa interior  ·  другой интерьер для этого дома", "  /casa interior  ·  another interior for this house"),
+        TR("  /casa interior  ·  следующий интерьер (anterior: предыдущий; <номер>: этот)",
+           "  /casa interior  ·  the next interior (anterior: the one before; <number>: that one)"),
+        TR("  /casa interior lista  ·  все интерьеры с номерами", "  /casa interior lista  ·  every interior with its number"),
         TR("  /casa carro  ·  в машине: она будет стоять здесь (или обновить её)",
            "  /casa carro  ·  in a car: it will stand here (or update it)"),
         TR("  /casa carro remover  ·  в своей машине: убрать её", "  /casa carro remover  ·  in your car: give it up"),
@@ -1082,6 +1130,10 @@ bool Command(const std::string& cmd, const std::vector<std::string>& args) {
         return true;
     }
     int here = OwnHouseHere();
+    if (first == "interior" && (second == "lista" || second == "list")) {
+        ListInteriors(here);
+        return true;
+    }
     if (first == "remover" || first == "remove" || first == "principal" || first == "main" || first == "interior") {
         if (here < 0) {
             ui::TheChat().AddError(TR("Подойдите к двери своего дома (или зайдите в него).", "Go to your house's door (or into it)."));
@@ -1095,10 +1147,30 @@ bool Command(const std::string& cmd, const std::vector<std::string>& args) {
         } else if (first == "interior" && h.interior == kWalkIn) {
             ui::TheChat().AddError(TR("Этот дом и есть интерьер: заходите в его двери.", "This house is its own interior: walk in through its doors."));
         } else if (first == "interior") {
-            h.interior = (uint8_t)FreeInterior(h.interior, here);
+            int pick = -1;
+            if (!second.empty() && std::all_of(second.begin(), second.end(), ::isdigit)) {  // its number in the list
+                int n = std::atoi(second.c_str()) - 1;
+                if (n < 0 || n >= kInteriorCount) {
+                    ui::TheChat().AddError(Format(TR("Нет такого: 1-%d (/casa interior lista).", "No such one: 1-%d (/casa interior lista)."), kInteriorCount));
+                    return true;
+                }
+                if (!Usable(n)) {
+                    ui::TheChat().AddError(TR("Для этого нужен мод Enterable Hidden Interiors (лаунчер его ставит).",
+                                              "This one needs the Enterable Hidden Interiors mod (the launcher installs it)."));
+                    return true;
+                }
+                if (Taken(n, here)) {
+                    ui::TheChat().AddError(TR("Этот интерьер уже у другого дома группы.", "Another house of the group has that one."));
+                    return true;
+                }
+                pick = n;
+            }
+            bool back = second == "anterior" || second == "prev" || second == "back";
+            h.interior = (uint8_t)(pick >= 0 ? pick : FreeInterior(h.interior, here, back ? -1 : 1));
             SaveOwn();
             SendOwn();
-            ui::TheChat().AddSystem(Format(TR("Интерьер: %s.", "Interior: %s."), InteriorName(h.interior).c_str()));
+            ui::TheChat().AddSystem(Format(TR("Интерьер %d/%d: %s. /casa interior lista - все.", "Interior %d/%d: %s. /casa interior lista - all of them."),
+                                           h.interior + 1, kInteriorCount, InteriorName(h.interior).c_str()));
             if (g_in.on && Dist(g_in.house.door, h.door) < 0.5f) {
                 const Interior& in = kInteriors[h.interior];
                 StartTrip(in.area, {in.x, in.y, in.z}, 0.0f, true, h);

@@ -58,6 +58,8 @@ struct ClientConfig {
     int headphonesKey = 0x4A;         // J: the headphones, a station on foot (Headphones.cpp)
     std::string headphonesColour = "preto";  // the headset's colours (Headset.cpp, /fone cor)
     int weaponWheelKey = 0x51;        // Q: held down, the weapon wheel (WeaponWheel.cpp)
+    bool photoClipboard = true;       // a photo of the game's camera goes to the clipboard too (Ctrl+V)
+    int dropWeaponKey = 0x47;         // G, with the wheel open: the weapon pointed at to the ground, its ammo with it
     int pingKey = 0x5A;               // Z: mark what the camera looks at for the others (Ping.cpp)
     int streamingMemoryMb = 0;        // [game] streaming_memory: the world's memory (Streaming.cpp), 0 = by the PC
 

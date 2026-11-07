@@ -1,0 +1,17 @@
+# SA-COOP Nostalgia - mods extras que o atualizador instala no jogo de todo mundo (coop\atualizador.ps1).
+# Uma linha por mod:  nome | destino | link direto do .zip | versão
+#   nome:    a pasta do mod dentro de modloader (ou só o nome, no destino "jogo")
+#   destino: modloader (o conteúdo do .zip vai para modloader\<nome>) ou jogo (vai para a pasta do GTA: mods de CLEO
+#            que não funcionam pelo modloader, como o Gang Rider)
+#   link:    um link direto para o .zip (o arquivo baixa ao abrir o link). Sem link a linha é pulada.
+#   versão:  qualquer texto; quando muda, o mod é baixado de novo
+# Os arquivos dos mods não ficam no nosso GitHub, que é público: cada link aponta para onde o mod é distribuído (a
+# página oficial do autor) ou para um lugar privado do grupo. Só .zip (o PowerShell não abre .7z nem .rar).
+Enterable_Hidden_Interiors | modloader |  | 4.3
+Praia_Realista             | modloader |  | 2.6
+Fair_Police                | modloader |  | 2.0.2
+Gang_Rider_CLEO            | jogo      |  | 3.09
+Soundize_Vanilla_AC_sounds | modloader |  | 1
+# Legendas em português nas cutscenes: uma tradução PT-BR do jogo (o .gxt em text\) pelo modloader. As legendas também
+# precisam estar ligadas no jogo: Opções > Tela > Legendas.
+Traducao_PTBR              | modloader |  | 1

@@ -85,6 +85,8 @@ bool ClientConfig::Load(const std::wstring& coopDirectory) {
     if (headphonesKey == 0x48) headphonesKey = 0x4A;
     headphonesColour = ini.Get("game", "headphones_colour", headphonesColour);
     weaponWheelKey = ini.GetInt("keys", "weapon_wheel", weaponWheelKey);
+    dropWeaponKey = ini.GetInt("keys", "drop_weapon", dropWeaponKey);
+    photoClipboard = ini.GetInt("game", "photo_clipboard", photoClipboard ? 1 : 0) != 0;
     pingKey = ini.GetInt("keys", "ping", pingKey);
     streamingMemoryMb = ini.GetInt("game", "streaming_memory", streamingMemoryMb);
 

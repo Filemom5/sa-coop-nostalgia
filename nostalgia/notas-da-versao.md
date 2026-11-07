@@ -1,5 +1,23 @@
 ## Novo nesta versão
 
+- **Carro extra da missão:** quando o carro do host não tem lugar, aparece só **um** carro extra para todos os
+  parceiros, não importa quantos sejam. Ninguém mais é teleportado para dentro de um carro: quem ficou sem lugar vai
+  junto de quem pegou o extra ou arruma o próprio.
+- **Largar arma:** com a roda de armas aberta (segurando Q), aponte para uma arma e aperte **G**: ela cai no chão à
+  frente, com toda a munição. Passando por cima, você pega de volta. A tecla muda em `coop.ini` (`keys/drop_weapon`).
+- **Foto no Ctrl+V:** a foto tirada com a câmera do jogo vai também para a área de transferência do Windows. É só
+  colar no Discord, no WhatsApp ou num editor. Dá para desligar em `coop.ini` (`game/photo_clipboard = 0`).
+- **`/casa interior`:** `/casa interior lista` mostra todos os interiores numerados, `/casa interior 12` escolhe o
+  12, e `/casa interior anterior` volta um. Entraram os quartos das namoradas e, com o mod Enterable Hidden
+  Interiors, a casa do OG Loc, os apartamentos do B Dup e do Woozie e o estúdio Blastin' Fools.
+- **Menu de mods:** no F2, o botão **Mods** lista os mods do modloader com Ligar/Desligar (vale ao abrir o jogo de
+  novo). No chat, `/mods` lista e `/mods <número>` liga ou desliga.
+- **Mods extras pelo launcher:** o atualizador instala os mods da lista `coop\mods-extras.txt` (Enterable Hidden
+  Interiors, Praia Realista, Fair Police, Gang Rider, Soundize e uma tradução PT-BR para as legendas) assim que cada
+  um tiver o link de download preenchido na lista.
+
+## Da versão 1.29.0
+
 - **Casa do Charlie Harper, sexta versão:**
   - **Rampa da garagem sem buraco:** a frente da rampa e dos degraus fecha até a calçada, sem fresta para o vazio.
   - **Sem piscar:** a base de pedra das paredes saiu (ela brigava com o rodapé). Fica só o rodapé de madeira escura.

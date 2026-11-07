@@ -7,6 +7,10 @@
 // when the slot is empty or out of ammo. In the middle, the weapon pointed at, with its ammo (in the clip / in all).
 // It is drawn with the game's own 2D: its polygons (CSprite2d::Draw2DPolygon), the weapons' HUD icons and its fonts.
 //
+// With the wheel open, G (keys/drop_weapon) drops the weapon pointed at: a pickup of it on the ground ahead, with all its
+// ammo (CREATE_PICKUP_WITH_AMMO, as the game's dropped weapons), the weapon gone from the player. Walking over it takes it
+// back; the others see it too (a pickup of one game only goes to the others: Pickups.cpp).
+//
 // The mouse moves a cursor of its own, drawn on the ring, as the desktop's does (one count of the mouse 1.5 pixels of a
 // 1080p screen), held inside the ring: the sector under it (by its angle, out of the middle) is the one picked.
 #include "features/weapon-wheel/WeaponWheel.h"
@@ -86,6 +90,30 @@ void Close(bool take) {
     LOGD("Weapon wheel: %s", kNames[weapon]);
 }
 
+// the weapon pointed at to the ground ahead, with its ammo
+void Drop() {
+    CPlayerPed* me = Me();
+    if (!me || g_pick <= 0) return;  // not the fists
+    const CWeapon& w = me->Weapons()[g_pick];
+    int type = w.type;
+    if (type <= 0 || type > 46) return;
+    int ammo = std::max(1, (int)w.ammoTotal);
+    int model = -1;
+    Cmd(0x0781).I(type).Out(&model).Run();  // GET_WEAPONTYPE_MODEL
+    if (model <= 0) return;
+    CVector p = me->GetPosition();
+    float h = me->CurrentRotation();
+    p.x -= std::sin(h) * 1.3f, p.y += std::cos(h) * 1.3f;  // ahead of the player
+    bool ground = false;
+    float z = Call<0x5696C0, float>(p.x, p.y, p.z + 1.0f, &ground, (CEntity**)nullptr);  // CWorld::FindGroundZFor3DCoord
+    if (ground && std::fabs(z - p.z) < 3.0f) p.z = z + 0.6f;
+    int pickup = -1;
+    Cmd(0x032B).I(model).I(3).I(ammo).F(p.x).F(p.y).F(p.z).Out(&pickup).Run();  // CREATE_PICKUP_WITH_AMMO, once
+    if (pickup < 0) return;
+    Cmd(0x0555).I(GetPedRef(me)).I(type).Run();  // REMOVE_WEAPON_FROM_CHAR
+    LOGI("Weapon wheel: dropped %s with %d ammo", kNames[type], ammo);
+}
+
 // ---------------------------------------------------------------- drawing (the game's own 2D)
 void Polygon(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA c) {
     Call<0x7285B0>(x1, y1, x2, y2, x3, y3, x4, y4, &c);  // CSprite2d::Draw2DPolygon: a fan of its corners 3, 4, 2, 1
@@ -161,6 +189,9 @@ void Draw() {
         if (weapon >= 16 && weapon != 40 && weapon != 44 && weapon != 45 && weapon != 46)
             g.GameText(ui::GAME_FONT_MENU, cx, cy + 6 * s, Format("%d / %d", w.ammoInClip, w.ammoTotal), 28 * s,
                        0xFFACCBF1, ui::TEXT_CENTER);
+        if (g_pick > 0)  // the key that drops it
+            g.GameText(ui::GAME_FONT_MENU, cx, cy + 46 * s, TR("G - выбросить", "G - drop it"), 22 * s, 0xFF9A9AA6,
+                       ui::TEXT_CENTER);
     } else {
         g.GameText(ui::GAME_FONT_MENU, cx, cy - 16 * s, "-", 34 * s, 0xFF9A9AA6, ui::TEXT_CENTER);
     }
@@ -177,6 +208,10 @@ public:
             Close(false);
             return;
         }
+        static bool dropWas = false;
+        bool drop = GetAsyncKeyState(Cfg().dropWeaponKey) & 0x8000;
+        if (drop && !dropWas) Drop();  // the weapon pointed at to the ground; the wheel stays open
+        dropWas = drop;
         if (!(GetAsyncKeyState(Cfg().weaponWheelKey) & 0x8000)) Close(true);  // let go: the weapon pointed at
     }
 

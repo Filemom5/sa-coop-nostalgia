@@ -2063,10 +2063,16 @@ void Players::FollowHost() {
     // within reach of the host: a partner the mission left farther comes by its moves (CS_FOLLOW) or /tp first
     if ((!flow::IsFollower() && !HostMissionRecent(20000)) || (hpos - mpos).Length() > 150.0f || me->AreaCode() != 0) return;
     m_followAt = NowMs();  // a try every second until the model is in and there is room
-    // One vehicle for the partners with no seat, not one each: with four players three more cars came at every mission
-    // start (01.11). A seat in another partner's first; of those with none, the lowest id gets it.
-    if (SeatWithPartner(hv, hpos)) {
+    // One copy of the host's vehicle for all the partners with no seat, whatever their number, and nobody moved into a
+    // car: with four players three more cars came at every mission start (01.11), then the partners after the first were
+    // put in its seats (07.11: "forced into a car"). The lowest id on foot by the host gets it; the others share it or
+    // find their own.
+    if (CopyTaken(hv, hpos)) {
         m_bikeFor = GetVehicleRef(hv);
+        ui::TheChat().AddSystem(TR("Нет места в машине хоста, а запасная машина уже у другого игрока: садитесь к нему или "
+                                   "найдите свою.",
+                                   "No seat in the host's vehicle, and the spare one is another partner's already: ride with "
+                                   "them or find your own."));
         return;
     }
     if (PartnerGetsOne(hv, hpos)) return;
@@ -2108,10 +2114,19 @@ bool Players::SeatWithPartner(CVehicle* hv, const CVector& hpos) {
     return false;
 }
 
+bool Players::CopyTaken(CVehicle* hv, const CVector& hpos) {
+    for (auto& [id, rp] : m_remote) {
+        CPed* p = rp.ped;
+        CVehicle* pv = p && p->InVehicle() ? p->Vehicle() : nullptr;
+        if (id != Net().HostId() && pv && pv != hv && pv->ModelIndex() == hv->ModelIndex() &&
+            (p->GetPosition() - hpos).Length() < 150.0f)
+            return true;
+    }
+    return false;
+}
+
+// another partner on foot by the host with a lower id gets the copy (it tries every second until there is room)
 bool Players::PartnerGetsOne(CVehicle* hv, const CVector& hpos) {
-    int ref = GetVehicleRef(hv);
-    if (m_waitFor != ref) m_waitFor = ref, m_waitSince = NowMs();
-    if (NowMs() - m_waitSince > 6000) return false;  // it got none (no room by it, the model loading): ours then
     for (auto& [id, rp] : m_remote)
         if (id != Net().HostId() && id < Net().MyId() && rp.ped && !rp.ped->InVehicle() && rp.hasState && rp.state.area == 0 &&
             NowMs() - rp.stateRecvMs < 1500 && (rp.ped->GetPosition() - hpos).Length() < 150.0f)

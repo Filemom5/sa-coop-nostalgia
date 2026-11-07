@@ -74,7 +74,12 @@ public:
 
     void Invalidate();  // destroy textures (device reset / shutdown)
     // Tests: the frame drawn so far (the game's back buffer, never other windows) as a 24-bit BMP, scaled down.
+    bool GrabFrame(std::vector<uint8_t>& bmpFile, int downscale);
     bool SaveFrame(const std::string& bmpPath, int downscale);
+    bool CopyFrameToClipboard();
+    // the next frame (the game's picture, before our overlay) to the clipboard: a photo of the game's camera
+    void QueueClipboardFrame() { m_clipboardFrame = true; }
+    bool TakeClipboardFrame() { bool q = m_clipboardFrame; m_clipboardFrame = false; return q; }
 
 private:
     struct Glyph {
@@ -119,6 +124,7 @@ private:
     void DrawRun(Font& f, float x, float y, std::wstring_view text, uint32_t argb);
 
     IDirect3DDevice9* m_dev = nullptr;
+    bool m_clipboardFrame = false;
     void* m_stateBlock = nullptr;
     Font m_fonts[FONT_COUNT];
     std::unordered_map<wchar_t, Icon> m_icons;

@@ -11,7 +11,9 @@ servidor. A ideia veio do servidor de RP em que o host jogava.
 | `/casa marcar` | Marca uma casa na porta onde você está. A primeira é grátis. Já tendo uma, a tela mostra o preço e você confirma com Y |
 | `/casa remover` | Na porta ou dentro da casa: desiste dela e recebe metade do que pagou |
 | `/casa principal` | Esta casa vira a principal (a do `/home` e a do começo da sessão) |
-| `/casa interior` | Troca o interior desta casa pelo próximo livre |
+| `/casa interior` | Troca o interior desta casa pelo próximo livre (`/casa interior anterior` volta um) |
+| `/casa interior lista` | Mostra todos os interiores com o número de cada (* = já é de outra casa do grupo, - = precisa do mod) |
+| `/casa interior <número>` | Escolhe aquele interior da lista |
 | `/casa carro` | No volante, com o carro parado onde ele deve ficar: o carro fica seu. O primeiro é grátis, os outros custam o valor do modelo. Num carro que já é seu, atualiza a vaga, as cores e as peças |
 | `/casa carro remover` | Dentro do seu carro (ou do lado): desiste dele, com metade do valor de volta |
 | `/home` | Leva para a porta da casa principal. Não funciona em missão |
@@ -19,7 +21,8 @@ servidor. A ideia veio do servidor de RP em que o host jogava.
 ## Como funciona
 
 - **Porta:** a casinha azul girando. Andando até ela, você entra num interior de casa do próprio jogo: as casas do roubo
-  noturno, as casas compráveis e mais algumas (são 40). Cada casa do grupo recebe um interior que nenhuma outra tem,
+  noturno, as casas compráveis, os quartos das namoradas e mais algumas. Com o mod Enterable Hidden Interiors (o launcher
+  instala) entram também a casa do OG Loc, os apartamentos do B Dup e do Woozie e o estúdio Blastin' Fools. Cada casa do grupo recebe um interior que nenhuma outra tem,
   para ninguém se encontrar lá dentro. A seta lá dentro leva de volta para a porta.
 - **Casa do Charlie Harper:** `/casa marcar` no terreno dela marca a própria casa: entra-se pelas portas dela, o
   disquete fica lá dentro, ao lado da porta da frente. Só um jogador do grupo pode tê-la.

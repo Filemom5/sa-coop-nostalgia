@@ -8,6 +8,7 @@
 #include "common/lib/util/Util.h"
 #include "entities/player/Players.h"
 #include "features/money/Money.h"
+#include "features/mods/Mods.h"
 #include "features/voice/Voice.h"
 #include "shared/api/net-session/Session.h"
 #include "shared/config/Config.h"
@@ -25,6 +26,7 @@ using w::kSaBlue, w::kSaMuted, w::kSaGreen, w::kSaRed, w::kSaLine;
 constexpr uint32_t kText = 0xFFE6E9EF;
 
 bool g_visible = false;
+bool g_modsView = false;  // the mods' list instead of the players (its button at the bottom)
 uint8_t g_giveTo = 0xFF;  // the player whose gift is being typed
 std::wstring g_amount;
 std::string g_note;  // what the last action did, shown a while
@@ -70,11 +72,57 @@ void Submit() {
     g_giveTo = 0xFF;
     g_amount.clear();
 }
+// the mods of the modloader folder, each with its button: on or off from the game's next start (features/mods)
+void RenderMods() {
+    auto& g = Gfx();
+    float s = g.Scale();
+    float lh = g.LineHeight(FONT_NORMAL), sh = g.LineHeight(FONT_SMALL), mh = g.LineHeight(FONT_MENU);
+    float rowH = lh + 14 * s, gap = 5 * s, room = mh * 1.6f, pad = 32 * s;
+    auto list = mods::List();
+    float W = std::min(900 * s, g.Width() - 32 * s), cw = W - 2 * pad;
+    float H = 24 * s + mh + 14 * s + sh + 12 * s + std::max<size_t>(1, list.size()) * (rowH + gap) + 14 * s + sh + 14 * s + rowH + 20 * s;
+    float x = (g.Width() - W) * 0.5f, y = std::max(16 * s, (g.Height() - H) * 0.45f);
+    float cx = x + pad, cy = y + 24 * s;
+    w::BeginFrame();
+    g.Rect(x, y, W, H, 0xF0000000);
+    g.RectOutline(x, y, W, H, kSaLine, std::max(1.0f, s));
+    g.Text(FONT_MENU, cx, cy, TR("Моды", "Mods"), kSaBlue, TEXT_SHADOW);
+    cy += mh + 14 * s;
+    g.Text(FONT_SMALL, cx, cy, TR("Включение и выключение - со следующего запуска игры.", "On and off apply from the game's next start."),
+           kSaMuted, TEXT_SHADOW);
+    cy += sh + 12 * s;
+    if (list.empty()) {
+        g.Text(FONT_NORMAL, cx, cy, TR("Папки modloader нет.", "No modloader folder."), kText, TEXT_SHADOW);
+        cy += rowH + gap;
+    }
+    for (const auto& m : list) {
+        g.Rect(cx, cy, cw, rowH, 0xFF090C10);
+        g.Text(FONT_NORMAL, cx + 14 * s, cy + (rowH - lh) * 0.5f, m.name, m.on ? kText : kSaMuted, TEXT_SHADOW);
+        std::string label = m.locked ? TR("нужен", "needed") : m.on ? TR("Вкл", "On") : TR("Выкл", "Off");
+        float bw = std::max(g.TextWidth(FONT_MENU, TR("Выкл", "Off")), g.TextWidth(FONT_MENU, TR("нужен", "needed"))) + 2 * room;
+        if (w::Button(("mod:" + m.name).c_str(), cx + cw - bw, cy, bw, rowH, label, !m.locked)) {
+            std::string error;
+            if (!mods::Toggle(m.name, error)) Note(error, true);
+            else Note(Format(TR("%s: %s при следующем запуске.", "%s: %s at the next start."), m.name.c_str(),
+                             m.on ? TR("выключен", "off") : TR("включён", "on")), false);
+        }
+        cy += rowH + gap;
+    }
+    cy += 14 * s - gap;
+    if (NowMs() < g_noteUntil) g.Text(FONT_SMALL, cx, cy, g_note, g_noteError ? kSaRed : kSaBlue, TEXT_SHADOW);
+    cy += sh + 14 * s;
+    const char* back = TR("Назад", "Back");
+    if (w::Button("back", cx + cw - g.TextWidth(FONT_MENU, back) - room, cy, g.TextWidth(FONT_MENU, back) + 2 * room, rowH, back))
+        g_modsView = false;
+    w::EndFrame();
+    w::DrawCursor();
+}
 }  // namespace
 
 void SetPlayersMenuVisible(bool visible) {
     if (visible == g_visible) return;
     g_visible = visible;
+    g_modsView = false;
     g_giveTo = 0xFF;
     g_amount.clear();
     g_noteUntil = 0;
@@ -100,6 +148,7 @@ void RenderPlayersMenu() {
     if (!g_visible) return;
     auto& net = Net();
     if (!net.Online() || !core::IsPlayerReady() || game::MenuActive() || core::ConnectMenuVisible()) return SetPlayersMenuVisible(false);
+    if (g_modsView) return RenderMods();
     if (g_giveTo != 0xFF && !net.Peers().count(g_giveTo)) g_giveTo = 0xFF;
     auto& g = Gfx();
     float s = g.Scale();
@@ -185,6 +234,8 @@ void RenderPlayersMenu() {
     const char* close = TR("Закрыть", "Close");
     float closeX = cx + cw - g.TextWidth(FONT_MENU, close);
     bool closing = w::Button("close", closeX - room, cy, g.TextWidth(FONT_MENU, close) + 2 * room, rowH, close);
+    const char* modsLabel = TR("Моды", "Mods");
+    if (w::Button("mods", cx, cy, g.TextWidth(FONT_MENU, modsLabel) + 2 * room, rowH, modsLabel)) g_modsView = true;
     w::EndFrame();
     w::DrawCursor();
     if (closing) SetPlayersMenuVisible(false);

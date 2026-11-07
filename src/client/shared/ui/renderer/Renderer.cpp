@@ -649,7 +649,8 @@ std::vector<std::wstring> Renderer::Wrap(FontId fid, std::wstring_view text, flo
     return lines;
 }
 
-bool Renderer::SaveFrame(const std::string& bmpPath, int downscale) {
+// the back buffer as a 24-bit bottom-up BMP file's bytes (its 14-byte file header, then a DIB), shrunk by downscale
+bool Renderer::GrabFrame(std::vector<uint8_t>& file, int downscale) {
     auto* dev = (IDirect3DDevice9*)game::D3DDevice();
     if (!dev || downscale < 1) return false;
     IDirect3DSurface9 *bb = nullptr, *plain = nullptr, *sys = nullptr;
@@ -663,7 +664,7 @@ bool Renderer::SaveFrame(const std::string& bmpPath, int downscale) {
         D3DLOCKED_RECT lr;
         if ((d.Format == D3DFMT_X8R8G8B8 || d.Format == D3DFMT_A8R8G8B8) && SUCCEEDED(sys->LockRect(&lr, nullptr, D3DLOCK_READONLY))) {
             int w = (int)d.Width / downscale, h = (int)d.Height / downscale, stride = (w * 3 + 3) & ~3;
-            std::vector<uint8_t> file(54 + (size_t)stride * h);
+            file.assign(54 + (size_t)stride * h, 0);
             BITMAPFILEHEADER* fh = (BITMAPFILEHEADER*)file.data();
             BITMAPINFOHEADER* ih = (BITMAPINFOHEADER*)(file.data() + 14);
             fh->bfType = 0x4D42;
@@ -680,15 +681,43 @@ bool Renderer::SaveFrame(const std::string& bmpPath, int downscale) {
                 for (int x = 0; x < w; ++x) memcpy(dst + x * 3, src + (size_t)x * downscale * 4, 3);  // B, G, R
             }
             sys->UnlockRect();
-            if (FILE* f = fopen(bmpPath.c_str(), "wb")) {
-                ok = fwrite(file.data(), 1, file.size(), f) == file.size();
-                fclose(f);
-            }
+            ok = true;
         }
     }
     if (sys) sys->Release();
     if (plain) plain->Release();
     if (bb) bb->Release();
+    return ok;
+}
+
+bool Renderer::SaveFrame(const std::string& bmpPath, int downscale) {
+    std::vector<uint8_t> file;
+    if (!GrabFrame(file, downscale)) return false;
+    bool ok = false;
+    if (FILE* f = fopen(bmpPath.c_str(), "wb")) {
+        ok = fwrite(file.data(), 1, file.size(), f) == file.size();
+        fclose(f);
+    }
+    return ok;
+}
+
+// the frame as it is to the Windows clipboard (a DIB: Ctrl+V puts it in a chat, a document, an image editor)
+bool Renderer::CopyFrameToClipboard() {
+    std::vector<uint8_t> file;
+    if (!GrabFrame(file, 1)) return false;
+    size_t n = file.size() - 14;
+    HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, n);
+    if (!mem) return false;
+    memcpy(GlobalLock(mem), file.data() + 14, n);
+    GlobalUnlock(mem);
+    if (!OpenClipboard(nullptr)) {
+        GlobalFree(mem);
+        return false;
+    }
+    EmptyClipboard();
+    bool ok = SetClipboardData(CF_DIB, mem) != nullptr;
+    CloseClipboard();
+    if (!ok) GlobalFree(mem);
     return ok;
 }
 

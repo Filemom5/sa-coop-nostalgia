@@ -130,6 +130,11 @@ void RenderOverlay() {
         if (!g.SaveFrame(g_screenshotPath, g_screenshotScale)) LOGW("Screenshot %s failed", g_screenshotPath.c_str());
         g_screenshotPath.clear();
     }
+    if (g.TakeClipboardFrame()) {  // the game's camera took a photo: it goes to Ctrl+V too
+        if (g.CopyFrameToClipboard()) ui::TheChat().AddSystem(TR("Фото скопировано: Ctrl+V, чтобы вставить.",
+                                                                 "Photo copied: Ctrl+V to paste it anywhere."));
+        else LOGW("The photo did not go to the clipboard");
+    }
     if (!g.Begin()) return;
     // a recording takes the game's picture alone: the modules still run (the cutscene partner is placed from here)
     g.SetHidden(Cfg().cleanScreen);

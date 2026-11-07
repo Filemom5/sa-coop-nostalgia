@@ -7,7 +7,8 @@
 #  - baixa os arquivos que estiverem faltando (quem atualizou com um atualizador antigo, que não conhecia esses arquivos);
 #  - instala o Open Limit Adjuster com o .ini ajustado se não houver nenhum limit adjuster na pasta do jogo nem em scripts\;
 #  - sobe no .ini do Open Limit Adjuster os limites que estiverem abaixo do necessário para 4 jogadores;
-#  - cria o atalho do launcher na área de trabalho (uma vez só), com o ícone do próprio gta_sa.exe.
+#  - cria o atalho do launcher na área de trabalho (uma vez só), com o ícone do próprio gta_sa.exe;
+#  - instala ou atualiza os mods extras da lista coop\mods-extras.txt (baixados dos links de lá, não do nosso GitHub).
 # Fora da pasta do GTA (sem o gta_sa.exe ao lado da pasta coop) ele não instala nada: só avisa.
 param([switch]$SoInstalar, [switch]$SemAbrir)
 
@@ -26,12 +27,13 @@ $Destinos = [ordered]@{
     'atualizador.ps1'               = (Join-Path $Coop 'atualizador.ps1')
     'launcher.ps1'                  = (Join-Path $Coop 'launcher.ps1')
     'logo.png'                      = (Join-Path $PastaLauncher 'logo.png')
+    'mods-extras.txt'               = (Join-Path $Coop 'mods-extras.txt')
     'III.VC.SA.LimitAdjuster.asi'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.asi')
     'III.VC.SA.LimitAdjuster.ini'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.ini')
     'OpenLimitAdjuster-LICENSE.txt' = (Join-Path (Join-Path $Coop 'licenses') 'OpenLimitAdjuster.txt')
 }
 $Limite = @('III.VC.SA.LimitAdjuster.asi', 'III.VC.SA.LimitAdjuster.ini', 'OpenLimitAdjuster-LICENSE.txt')
-$SemCopia = @('atualizador.ps1', 'launcher.ps1', 'logo.png')  # não guardam .original
+$SemCopia = @('atualizador.ps1', 'launcher.ps1', 'logo.png', 'mods-extras.txt')  # não guardam .original
 # o mínimo de cada limite no [SALIMITS] do Open Limit Adjuster para 4 jogadores (o jogo tem 140 pedestres e 110 carros)
 $Minimos = [ordered]@{ 'Peds' = 500; 'PedIntelligence' = 500; 'Vehicles' = 500; 'EntryInfoNode' = 4000 }
 $Cabecalho = @{ 'User-Agent' = 'sa-coop-nostalgia-atualizador' }
@@ -156,8 +158,61 @@ function Instalar($release) {
     if ($versaoNova) { Set-Content -Path $ArquivoVersao -Value $release.tag_name -Encoding ASCII }
 }
 
+# Os mods extras de coop\mods-extras.txt, uma linha cada: nome | destino | link do .zip | versão. Destino "modloader": o
+# conteúdo do .zip vai para modloader\<nome>; "jogo": para a pasta do jogo (mods de CLEO que não rodam pelo modloader).
+# Instala o que falta e o que mudou de versão (a versão instalada fica em coop\mods\<nome>.versao); sem link, pula.
+# Um mod que a pessoa desligou no menu do jogo continua desligado: isso fica no modloader.ini, que não é mexido aqui.
+function Mods-Extras {
+    $lista = Join-Path $Coop 'mods-extras.txt'
+    if (-not (Test-Path $lista)) { return @() }
+    $mods = @()
+    foreach ($linha in (Get-Content -Encoding UTF8 $lista)) {
+        $l = $linha.Trim()
+        if (-not $l -or $l.StartsWith('#')) { continue }
+        $c = @($l.Split('|') | ForEach-Object { $_.Trim() })
+        if ($c.Count -lt 4 -or -not $c[2]) { continue }
+        $mods += [pscustomobject]@{ Nome = $c[0]; Destino = $c[1]; Link = $c[2]; Versao = $c[3] }
+    }
+    return $mods
+}
+
+function Mods-Para-Instalar {
+    return @(Mods-Extras | Where-Object {
+        $marca = Join-Path (Join-Path $Coop 'mods') ($_.Nome + '.versao')
+        -not (Test-Path $marca) -or (Get-Content -Raw $marca).Trim() -ne $_.Versao
+    })
+}
+
+function Instalar-Mods {
+    foreach ($mod in (Mods-Para-Instalar)) {
+        try {
+            Write-Host ('Instalando o mod ' + $mod.Nome + ' (' + $mod.Versao + ')...')
+            $temp = Join-Path $env:TEMP ('nostalgia-mod-' + [guid]::NewGuid().ToString())
+            New-Item -ItemType Directory -Force -Path $temp | Out-Null
+            $zip = Join-Path $temp 'mod.zip'
+            Invoke-WebRequest -Uri $mod.Link -OutFile $zip -UseBasicParsing -Headers $Cabecalho
+            $aberto = Join-Path $temp 'aberto'
+            Expand-Archive -Path $zip -DestinationPath $aberto -Force
+            # um .zip com uma pasta só dentro: o conteúdo dela
+            $raiz = $aberto
+            $itens = @(Get-ChildItem -Force $aberto)
+            if ($itens.Count -eq 1 -and $itens[0].PSIsContainer) { $raiz = $itens[0].FullName }
+            if ($mod.Destino -eq 'jogo') { $alvo = $Jogo } else { $alvo = Join-Path (Join-Path $Jogo 'modloader') $mod.Nome }
+            New-Item -ItemType Directory -Force -Path $alvo | Out-Null
+            Copy-Item -Path (Join-Path $raiz '*') -Destination $alvo -Recurse -Force
+            $marcas = Join-Path $Coop 'mods'
+            New-Item -ItemType Directory -Force -Path $marcas | Out-Null
+            Set-Content -Path (Join-Path $marcas ($mod.Nome + '.versao')) -Value $mod.Versao -Encoding ASCII
+            Remove-Item -Recurse -Force $temp
+        } catch {
+            Write-Host ('Não deu para instalar o mod ' + $mod.Nome + ' (' + $_.Exception.Message + '). Tento de novo na próxima vez.')
+        }
+    }
+}
+
 function Fazer-Tudo($release) {
     if ($release) { Instalar $release }
+    Instalar-Mods
     foreach ($ini in (Inis-Para-Ajustar)) {
         Write-Host ('Ajustando os limites em ' + $ini.Name + '...')
         $null = Ajustar-Ini $ini.FullName $true
@@ -228,10 +283,11 @@ try {
     $faltando = @(Arquivos-Faltando $release).Count -gt 0
     $limiteFalta = Falta-LimitAdjuster $release
     $iniAjustar = @(Inis-Para-Ajustar).Count -gt 0
-    if ($versaoNova -or $faltando -or $limiteFalta -or $iniAjustar) {
+    $modsFaltando = @(Mods-Para-Instalar).Count -gt 0
+    if ($versaoNova -or $faltando -or $limiteFalta -or $iniAjustar -or $modsFaltando) {
         if ($versaoNova) { Write-Host ('Nova versão: ' + $release.tag_name + '. Instalando...') }
         if ($limiteFalta) { Write-Host 'Instalando o Open Limit Adjuster (limites para 4 jogadores)...' }
-        $pastas = @($Jogo, $Coop, (Join-Path $Jogo 'scripts'))
+        $pastas = @($Jogo, $Coop, (Join-Path $Jogo 'scripts'), (Join-Path $Jogo 'modloader'))
         if (@($pastas | Where-Object { -not (Pode-Escrever $_) }).Count -eq 0) {
             Fazer-Tudo $release
         } else {

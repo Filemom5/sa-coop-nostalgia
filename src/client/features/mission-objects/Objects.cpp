@@ -17,10 +17,12 @@
 #include "entities/vehicle/VehicleState.h"
 #include "entities/vehicle/Vehicles.h"
 #include "shared/api/net-session/Session.h"
+#include "shared/config/Config.h"
 #include "shared/game/Game.h"
 #include "shared/game/Script.h"
 #include "shared/lib/core/Core.h"
 #include "shared/lib/memory/Memory.h"
+#include "shared/ui/renderer/Renderer.h"
 
 namespace coop {
 
@@ -517,6 +519,7 @@ bool __fastcall HookTakePhotograph(void* weapon, void* edx, CEntity* owner, CVec
     bool taken = g_origTakePhoto(weapon, edx, owner, point);  // false for the other player's camera (Players)
     LOGI("Camera shot by %s: %s (camera mode %d)", owner == (CEntity*)FindPlayerPed(0) ? "us" : "another", taken ? "taken" : "none",
          (int)cam::Mode());
+    if (taken && owner == (CEntity*)FindPlayerPed(0) && Cfg().photoClipboard) ui::Gfx().QueueClipboardFrame();  // Ctrl+V
     if (!taken || !Net().Online() || Net().IsHost() || !core::IsPlayerReady()) return taken;
     std::vector<uint16_t> peds, objects;
     CPoolHeader* pool = PedPool();
