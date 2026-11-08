@@ -1,5 +1,8 @@
 ## Novo nesta versão
 
+- **Casa do Charlie no editor de mapa (Ariane):** com a pasta `modloader\CasaCharlie_Editor` instalada, vá até a casa
+  e digite `/editorcasa`: a mobília vira um arquivo que o editor abre. Reinicie o jogo, edite (mover, girar, apagar e
+  pôr objetos) e salve. Depois o arquivo vai para o mod e todos recebem a casa como você deixou.
 - **Trocar o host na sessão:** o host digita `/host <nick ou número>` e passa o papel para outro jogador. A partir daí
   as missões rodam no jogo dele: é ele quem inicia as missões, leva o NPC, pilota o avião de controle remoto etc. Para
   voltar, o novo host faz `/host` para o anterior (ou para qualquer outro). `/host` sozinho mostra quem é o host.

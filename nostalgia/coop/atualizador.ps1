@@ -28,6 +28,7 @@ $Destinos = [ordered]@{
     'launcher.ps1'                  = (Join-Path $Coop 'launcher.ps1')
     'logo.png'                      = (Join-Path $PastaLauncher 'logo.png')
     'mods-extras.txt'               = (Join-Path $Coop 'mods-extras.txt')
+    'casa_charlie.ipl'              = (Join-Path $Coop 'casa_charlie.ipl')
     'III.VC.SA.LimitAdjuster.asi'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.asi')
     'III.VC.SA.LimitAdjuster.ini'   = (Join-Path $Jogo 'III.VC.SA.LimitAdjuster.ini')
     'OpenLimitAdjuster-LICENSE.txt' = (Join-Path (Join-Path $Coop 'licenses') 'OpenLimitAdjuster.txt')

@@ -16,15 +16,25 @@
 //    taken away again past 220 m; not kept by the game's saves. The grand piano is ours, in the house's model;
 //  * the palms, bushes and the lifebuoy of the map that would stand in the house are hidden (and walked through): again
 //    whenever that part of the map loads anew;
+//  * the furniture can come from coop\casa_charlie.ipl instead (the house finished in a map editor): /editorcasa writes
+//    it as it stands into modloader\CasaCharlie_Editor (tools/charlie/editor.py: the house's files for the editor);
+//    with that folder on, its .ipl puts the furniture, not the mod;
 //  * no rain under its roofs: CCullZones::CamNoRain and PlayerNoRain answer yes there.
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include "common/lib/log/Log.h"
+#include "common/lib/util/Util.h"
 #include "features/charlie/CharlieData.h"
 #include "features/charlie/Cut.h"
+#include "shared/config/Config.h"
 #include "shared/game/Game.h"
 #include "shared/game/ModelSwap.h"
 #include "shared/game/Script.h"
@@ -32,6 +42,7 @@
 #include "shared/game/WalkIn.h"
 #include "shared/lib/core/Core.h"
 #include "shared/lib/memory/Memory.h"
+#include "shared/ui/chat/Chat.h"
 
 namespace coop::charlie {
 
@@ -237,18 +248,101 @@ void Hide(uintptr_t poolAddr, size_t elem) {
 constexpr float kFurnishIn = 160.0f, kFurnishOut = 220.0f;  // from the house's middle
 constexpr float kMidX = 273.4f, kMidY = -1766.8f;
 constexpr int kFurnishPerFrame = 6;
-constexpr size_t kPieces = sizeof data::kFurniture / sizeof data::kFurniture[0];
-int g_piece[kPieces] = {};  // their objects' handles (0: not made)
+constexpr const wchar_t* kEditorDir = L"modloader\\CasaCharlie_Editor\\";  // the house for a map editor (tools/charlie/editor.py)
+constexpr const wchar_t* kIplName = L"casa_charlie.ipl";
+
+// a piece: the furniture's (kFurniture: its bottom at z, a heading) or a placement of casa_charlie.ipl (its origin, a
+// rotation as an IPL has it: the inverse of the object's)
+struct Placed {
+    int model;
+    float x, y, z, heading;
+    bool ipl;
+    float qx, qy, qz, qw;
+};
+std::vector<Placed> g_list;
+std::vector<int> g_piece;  // their objects' handles (0: not made)
 bool g_furnished = false;
+bool g_editor = false;  // the editor's folder is on: its .ipl puts the furniture (modloader), not we
+
+std::string Lower(std::string s) {
+    for (char& c : s) c = (char)tolower((unsigned char)c);
+    return s;
+}
+
+bool ReadText(const std::wstring& path, std::string& out) {
+    std::ifstream f(path.c_str(), std::ios::binary);
+    if (!f) return false;
+    std::stringstream ss;
+    ss << f.rdbuf();
+    out = ss.str();
+    return true;
+}
+
+// the editor's folder with its .ipl, not off in modloader.ini's [Profiles.Default.IgnoreMods]
+bool EditorOn() {
+    std::error_code ec;
+    if (!std::filesystem::exists(Cfg().gameDir + kEditorDir + kIplName, ec)) return false;
+    std::string ini, line;
+    if (!ReadText(Cfg().gameDir + L"modloader\\modloader.ini", ini)) return true;
+    std::istringstream in(ini);
+    bool section = false;
+    while (std::getline(in, line)) {
+        line.erase(0, line.find_first_not_of(" \t"));
+        line.erase(line.find_last_not_of(" \t\r") + 1);
+        if (!line.empty() && line[0] == '[') section = Lower(line) == "[profiles.default.ignoremods]";
+        else if (section && Lower(line) == "casacharlie_editor") return false;
+    }
+    return true;
+}
+
+// the inst lines of an .ipl (model, name, interior, x, y, z, rx, ry, rz, rw, lod)
+std::vector<Placed> ReadIpl(const std::string& text) {
+    std::vector<Placed> out;
+    std::istringstream in(text);
+    std::string line;
+    bool inst = false;
+    while (std::getline(in, line)) {
+        std::string l = Lower(line);
+        l.erase(0, l.find_first_not_of(" \t"));
+        if (l.rfind("inst", 0) == 0) inst = true;
+        else if (l.rfind("end", 0) == 0) inst = false;
+        else if (inst && !l.empty() && l[0] != '#') {
+            for (char& c : l) if (c == ',') c = ' ';
+            Placed p{};
+            char name[64];
+            int interior = 0;
+            if (sscanf(l.c_str(), "%d %63s %d %f %f %f %f %f %f %f", &p.model, name, &interior, &p.x, &p.y, &p.z, &p.qx,
+                       &p.qy, &p.qz, &p.qw) == 10 && interior == 0) {
+                p.ipl = true;
+                out.push_back(p);
+            }
+        }
+    }
+    return out;
+}
+
+// coop\casa_charlie.ipl (the house finished in the editor) or the furniture of CharlieData.h
+void LoadList() {
+    g_list.clear();
+    std::string text;
+    if (ReadText(Cfg().coopDir + kIplName, text)) g_list = ReadIpl(text);
+    if (!g_list.empty()) LOGI("Charlie: %zu pieces from coop\\casa_charlie.ipl", g_list.size());
+    else
+        for (const data::Piece& p : data::kFurniture) g_list.push_back({p.model, p.x, p.y, p.z, p.heading, false, 0, 0, 0, 1});
+    g_piece.assign(g_list.size(), 0);
+    g_editor = EditorOn();
+    if (g_editor) LOGI("Charlie: the editor's folder is on (modloader\\CasaCharlie_Editor): the furniture is its");
+}
 
 void Furnish() {
+    if (g_editor) return;
     int made = 0;
     bool all = true;
-    for (size_t i = 0; i < kPieces && made < kFurnishPerFrame; ++i) {
+    for (size_t i = 0; i < g_list.size() && made < kFurnishPerFrame; ++i) {
         if (g_piece[i] && GetObject(g_piece[i])) continue;
         g_piece[i] = 0;
-        const data::Piece& p = data::kFurniture[i];
-        if (!IsObjectModel(p.model)) continue;  // not in this game's files
+        const Placed& p = g_list[i];
+        if (p.ipl ? !IsValidModel(p.model) : !IsObjectModel(p.model)) continue;  // not in this game's files
         all = false;
         if (!IsModelLoaded(p.model)) {
             RequestModel(p.model);
@@ -261,15 +355,20 @@ void Furnish() {
         if (!o) continue;
         // OBJECT_MISSION2: the game's saves keep only OBJECT_MISSION ones (a save would bring a copy back)
         Field<uint8_t>(o, 0x13C) = 6;
-        Cmd(0x0177).I(h).F(p.heading).Run();  // SET_OBJECT_HEADING
-        Cmd(0x0550).I(h).I(1).Run();          // FREEZE_OBJECT_POSITION: a chair is not knocked over
+        if (p.ipl) {
+            Cmd(0x01BC).I(h).F(p.x).F(p.y).F(p.z).Run();                // SET_OBJECT_COORDINATES: its origin there
+            Cmd(0x07C5).I(h).F(-p.qx).F(-p.qy).F(-p.qz).F(p.qw).Run();  // SET_OBJECT_QUATERNION (the IPL's inverse)
+        } else {
+            Cmd(0x0177).I(h).F(p.heading).Run();  // SET_OBJECT_HEADING
+        }
+        Cmd(0x0550).I(h).I(1).Run();  // FREEZE_OBJECT_POSITION: a chair is not knocked over
         g_piece[i] = h;
         ++made;
     }
     if (all && !made && !g_furnished) {
         g_furnished = true;
-        for (const data::Piece& p : data::kFurniture) MarkModelNotNeeded(p.model);
-        LOGI("Charlie: the house furnished (%zu pieces)", kPieces);
+        for (const Placed& p : g_list) MarkModelNotNeeded(p.model);
+        LOGI("Charlie: the house furnished (%zu pieces)", g_list.size());
     }
 }
 
@@ -279,6 +378,38 @@ void Unfurnish() {
         h = 0;
     }
     g_furnished = false;
+}
+
+// /editorcasa: the furniture as it stands, as modloader\CasaCharlie_Editor\casa_charlie.ipl (for the editor)
+void ExportIpl() {
+    if (g_editor)
+        return ui::TheChat().AddError(TR("Папка редактора уже включена: выключите её в /mods и перезапустите игру.",
+                                         "The editor's folder is on already: turn it off in /mods and restart the game."));
+    if (!g_furnished)
+        return ui::TheChat().AddError(TR("Подойдите к дому Чарли (мебель должна стоять).",
+                                         "Go to Charlie's house first (its furniture has to be there)."));
+    std::string out = "# Charlie Harper's house: its furniture (/editorcasa). Edit it in the map editor; then it goes to "
+                      "coop\\casa_charlie.ipl.\ninst\n";
+    int n = 0;
+    for (int h : g_piece) {
+        CObject* o = h ? GetObject(h) : nullptr;
+        if (!o) continue;
+        CVector p = o->GetPosition();
+        float half = o->GetHeading() * 0.5f;
+        out += Format("%d, coop_obj, 0, %.4f, %.4f, %.4f, 0, 0, %.6f, %.6f, -1\n", (int)o->ModelIndex(), p.x, p.y, p.z,
+                      -std::sin(half), std::cos(half));
+        ++n;
+    }
+    out += "end\n";
+    std::error_code ec;
+    std::filesystem::create_directories(Cfg().gameDir + kEditorDir, ec);
+    if (!WriteFileBytes(Cfg().gameDir + kEditorDir + kIplName, out.data(), out.size()))
+        return ui::TheChat().AddError(TR("Не удалось записать файл.", "Could not write the file."));
+    LOGI("Charlie: %d pieces written to modloader\\CasaCharlie_Editor\\casa_charlie.ipl", n);
+    ui::TheChat().AddSystem(Format(TR("Мебель (%d) записана в modloader\\CasaCharlie_Editor\\casa_charlie.ipl. "
+                                      "Перезапустите игру и откройте редактор.",
+                                      "The furniture (%d) is written to modloader\\CasaCharlie_Editor\\casa_charlie.ipl. "
+                                      "Restart the game and open the editor."), n));
 }
 
 // for the group's homes (/casa marcar here: the house itself, its save disk inside)
@@ -307,12 +438,17 @@ public:
         for (uint32_t model : {kHouseModel, kEastModel})  // near as far as the house is seen (the east block: not its LOD)
             if (void* mi = g_ours ? ModelInfo(model) : nullptr) Ref<float>((uintptr_t)mi + 0x18) = kDrawDistance;
         m_next = 0;
-        for (int& h : g_piece) h = 0;  // a new game: the old one's objects are gone
+        LoadList();  // a new game: the old one's objects are gone
         g_furnished = false;
     }
     void OnGameShutdown() override {
         for (int& h : g_piece) h = 0;
         g_furnished = false;
+    }
+    bool OnCommand(const std::string& cmd, const std::vector<std::string>&) override {
+        if (cmd != "editorcasa") return false;
+        ExportIpl();
+        return true;
     }
     void OnPostProcess() override {
         if (!g_ours || !core::IsPlayerReady()) return;
@@ -323,7 +459,7 @@ public:
         if (d < kFurnishIn && me->AreaCode() == 0) {
             if (!g_furnished) Furnish();
         } else if (d > kFurnishOut) {
-            if (g_furnished || g_piece[0]) Unfurnish();
+            if (g_furnished || (!g_piece.empty() && g_piece[0])) Unfurnish();
         }
         if (TimeMs() < m_next) return;
         m_next = TimeMs() + 1000;

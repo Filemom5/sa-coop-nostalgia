@@ -73,6 +73,15 @@ dá para entrar e sair andando, sem teleporte.
 8. **Vizinhos:** repintar as casas ao redor, levá-las até a mesma linha da casa na praia, com sacadas, e o mesmo muro
    de madeira na frente delas.
 
+## No editor de mapa
+
+`tools/charlie/editor.py CharlieData.h coop\extrair pasta` faz `modloader\CasaCharlie_Editor`: os modelos da casa
+(perto e longe), o bloco do leste já cortado e `bev_law2.txd`/`welod_law2.txd` do jogo com as nossas texturas, para o
+editor (Ariane) mostrar a casa como o mod. No jogo, `/editorcasa` grava ali `casa_charlie.ipl` com a mobília como
+está; com esse .ipl na pasta (e a pasta ligada no modloader) o mod não põe a mobília: é o .ipl. Editada, a mobília vai
+para `nostalgia/coop/casa_charlie.ipl` (o atualizador a põe em `coop\`), que o mod lê no lugar da de CharlieData.h
+(com a pasta do editor desligada).
+
 ## Código e ferramentas
 
 - `src/client/features/charlie/Lot.cpp`: o `/lote` e o `/extrair` (copia de `models\gta3.img` para `coop\extrair\`

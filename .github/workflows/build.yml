@@ -53,6 +53,7 @@ jobs:
           Copy-Item nostalgia/coop/launcher.ps1 release/
           Copy-Item nostalgia/coop/launcher/logo.png release/
           Copy-Item nostalgia/coop/mods-extras.txt release/
+          if (Test-Path nostalgia/coop/casa_charlie.ipl) { Copy-Item nostalgia/coop/casa_charlie.ipl release/ }
           Compress-Archive -Path "nostalgia/Jogar SA-COOP.bat", "nostalgia/coop" -DestinationPath release/SA-COOP-Nostalgia-instalador.zip
           Get-ChildItem release
 
