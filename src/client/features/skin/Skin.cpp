@@ -12,6 +12,7 @@
 
 #include "common/lib/log/Log.h"
 #include "common/lib/util/Util.h"
+#include "shared/config/Config.h"
 #include "shared/game/Game.h"
 #include "shared/game/Script.h"
 #include "shared/lib/core/Core.h"
