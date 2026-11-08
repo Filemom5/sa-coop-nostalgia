@@ -141,7 +141,7 @@ def compile_one(src, obj, flags, is_c):
     dep = obj.with_suffix(".d")
     cmd = [str(CC if is_c else CXX)] + flags + ["-MMD", "-MF", str(dep), "-c", str(ROOT / src), "-o", str(obj)]
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    return src, r.returncode, (r.stdout + r.stderr).strip(), cmd
+    return src, r.returncode, (r.stdout + r.stderr).strip().encode("ascii", "replace").decode(), cmd
 
 
 def build_flags(t, debug):
