@@ -42,6 +42,7 @@ enum MsgId : uint8_t {
     C_WORLD_KEEP = 9,        // host: a fresh snapshot is impossible now (mission), send the stored world
     C_WORLD_NEWGAME = 10,    // host: it plays a new game's prologue (no save of it can exist yet)
     C_WORLD_FOLLOW = 11,     // host: the prologue is over but cannot be saved yet: partners follow in a new game
+    C_HOST_TRANSFER = 12,    // host: u8 the player who becomes the host (/host, between missions; after its snapshot)
 
     // ---- server -> client ----
     S_WELCOME = 20,          // see Welcome

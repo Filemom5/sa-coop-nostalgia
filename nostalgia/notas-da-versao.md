@@ -1,5 +1,15 @@
 ## Novo nesta versão
 
+- **Trocar o host na sessão:** o host digita `/host <nick ou número>` e passa o papel para outro jogador. A partir daí
+  as missões rodam no jogo dele: é ele quem inicia as missões, leva o NPC, pilota o avião de controle remoto etc. Para
+  voltar, o novo host faz `/host` para o anterior (ou para qualquer outro). `/host` sozinho mostra quem é o host.
+  - Só fora de missão e de cutscene, e a pé: o jogo do host é salvo no servidor antes da troca, e os outros recebem
+    esse mundo no começo da próxima missão, para todo mundo seguir do mesmo ponto.
+  - O servidor continua rodando no PC de quem abriu a sessão: se essa pessoa sair, a sessão acaba como sempre.
+  - É novo: testem numa sessão curta antes de usar numa longa.
+
+## Da versão 1.30.0
+
 - **Carro extra da missão:** quando o carro do host não tem lugar, aparece só **um** carro extra para todos os
   parceiros, não importa quantos sejam. Ninguém mais é teleportado para dentro de um carro: quem ficou sem lugar vai
   junto de quem pegou o extra ou arruma o próprio.

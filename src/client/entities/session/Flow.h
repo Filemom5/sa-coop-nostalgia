@@ -36,6 +36,7 @@ void OnGameStarted();
 void OnGameShutdown();
 void OnWorldReceived(const std::vector<uint8_t>& data);
 void RequestFreshWorld();  // host: the server asked for a fresh snapshot
+bool UploadWorldNow();     // host: its game to the server now (false: not now, a mission or a vehicle)
 void OnHostInPrologue();   // partner: the host plays a new game's prologue alone, the partner waits for its end
 void OnWorldNone();        // partner: no world to load yet, the server sends it when the host has its game
 void OnNewGameFromHost();  // partner: the prologue is over (no save of it yet): a new game of its own, next to the host

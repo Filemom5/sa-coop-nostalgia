@@ -249,6 +249,19 @@ void Server::OnPacket(ENetPeer* peer, uint8_t channel, const uint8_t* data, size
         case C_WORLD_FOLLOW:
             if (p->isHost) FollowersJoin();
             break;
+        case C_HOST_TRANSFER: {  // the host hands its role to another player (/host)
+            Player* t = FindById(r.U8());
+            if (!r.Ok() || !p->isHost || !t || !t->joined || t == p) break;
+            p->isHost = false;
+            t->isHost = true;
+            Writer w(S_HOST_CHANGED);
+            w.U8(t->id);
+            Broadcast(CH_RELIABLE, w);
+            SendChat(nullptr, kServerId, kColorServer, Format("%s передал роль хоста игроку %s.", p->name.c_str(), t->name.c_str()),
+                     Format("%s handed the host's role to %s.", p->name.c_str(), t->name.c_str()));
+            LOGI("Хост: %s -> %s", p->name.c_str(), t->name.c_str());
+            break;
+        }
         case C_STATUS: {
             uint8_t st = r.U8();
             bool becameInGame = st == STATUS_INGAME && p->status != STATUS_INGAME;
@@ -391,8 +404,8 @@ void Server::HandleCommand(Player* p, const std::string& text) {
         reply(kColorServer, "Команды: /players, /pm <id> <текст>, /me <действие>",
               "Commands: /players, /pm <id> <text>, /me <action>");
         if (admin)
-            reply(kColorServer, "Для хоста: /kick <ник или номер> [причина], /say <текст>",
-                  "For the host: /kick <nickname or number> [reason], /say <text>");
+            reply(kColorServer, "Для хоста: /kick <ник или номер> [причина], /say <текст>, /host <ник или номер> (передать роль хоста)",
+                  "For the host: /kick <nickname or number> [reason], /say <text>, /host <nickname or number> (hand the host's role over)");
         if (admin || m_cfg.partnerTeleport)
             reply(kColorServer, "В игре: /tp (переместиться к напарнику), /tphere (позвать напарника к себе). Напарник отвечает Y или N",
                   "In the game: /tp (go to your partner), /tphere (bring your partner to you). Your partner answers Y or N");
@@ -434,7 +447,7 @@ void Server::HandleCommand(Player* p, const std::string& text) {
         SendChat(nullptr, kServerId, kColorServer, "[Сервер] " + rest, "[Server] " + rest);
     } else if (cmd == "quit" && !p) {
         Stop();
-    } else if (cmd == "tp" || cmd == "tphere" || cmd == "voice" || cmd == "save" || cmd == "skin") {
+    } else if (cmd == "host" || cmd == "tp" || cmd == "tphere" || cmd == "voice" || cmd == "save" || cmd == "skin") {
         // handled by the game client locally; nothing to do on the server
     } else {
         reply(kColorError, "Такой команды нет. Чтобы увидеть список команд, напишите /help.",

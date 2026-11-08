@@ -648,6 +648,14 @@ void Update() {
     }
 }
 
+// host: its game to the server now, for the role's handover (false: it cannot be saved now)
+bool UploadWorldNow() {
+    std::vector<uint8_t> snap;
+    if (!Net().IsHost() || !core::SaveWorldSnapshot(snap)) return false;
+    UploadWorld(snap, "progress");  // the partners in the game get it too: everyone starts from the same world
+    return true;
+}
+
 void RequestFreshWorld() {
     g_worldUploadPending = true;
     g_keepSent = false;  // a new request gets its own answer
