@@ -401,8 +401,8 @@ void Server::HandleCommand(Player* p, const std::string& text) {
     bool admin = !p || p->isHost;
 
     if (cmd == "help" || cmd == "?") {
-        reply(kColorServer, "Команды: /players, /pm <id> <текст>, /me <действие>",
-              "Commands: /players, /pm <id> <text>, /me <action>");
+        reply(kColorServer, "Команды: /players, /pm <id> <текст>, /me <действие>, /skin (свой скин вместо CJ)",
+              "Commands: /players, /pm <id> <text>, /me <action>, /skin (a skin of your own in place of CJ)");
         if (admin)
             reply(kColorServer, "Для хоста: /kick <ник или номер> [причина], /say <текст>, /host <ник или номер> (передать роль хоста)",
                   "For the host: /kick <nickname or number> [reason], /say <text>, /host <nickname or number> (hand the host's role over)");

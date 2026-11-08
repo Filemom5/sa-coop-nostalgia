@@ -1,5 +1,8 @@
 ## Novo nesta versão
 
+- **Skin própria:** `/skin` mostra a lista (sweet, smoke, ryder, tenpenny, grove, ballas, policia, swat...) e
+  `/skin <nome ou número do modelo>` troca a sua; `/skin cj` volta ao CJ com as roupas dele. Cada um com a sua, e os
+  outros veem. Só a pé e fora de cutscene. Com uma skin, o provador não troca a roupa: volte ao CJ antes.
 - **Casa do Charlie no editor de mapa (Ariane):** com a pasta `modloader\CasaCharlie_Editor` instalada, vá até a casa
   e digite `/editorcasa`: a mobília vira um arquivo que o editor abre. Reinicie o jogo, edite (mover, girar, apagar e
   pôr objetos) e salve. Depois o arquivo vai para o mod e todos recebem a casa como você deixou.
