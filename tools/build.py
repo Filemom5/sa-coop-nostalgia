@@ -140,7 +140,7 @@ def compile_one(src, obj, flags, is_c):
     obj.parent.mkdir(parents=True, exist_ok=True)
     dep = obj.with_suffix(".d")
     cmd = [str(CC if is_c else CXX)] + flags + ["-MMD", "-MF", str(dep), "-c", str(ROOT / src), "-o", str(obj)]
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
     return src, r.returncode, (r.stdout + r.stderr).strip(), cmd
 
 
